@@ -176,7 +176,7 @@ def matricize(T,mode):
 # rezultatul are aceeasi forma ca T cu exceptia dimensiunii mode care se schimba din I_mode in J
 # se bazeaza pe proprietatea: (T x_n M)_(n) = M @ T_(n)
 # adica produsul mod-n e echivalent cu o inmultire matriceala aplicata pe matricizarea tensorului.
-def produs_mod_n(T,M,mode):
+def mode_n_product(T,M,mode):
     N   = T.ndim #ndim - number of array dimensions
     I_n = T.shape[mode] #dimensiunea modului pe care aplicam M
     J   = M.shape[0] #numarul de linii al matricei M
@@ -195,7 +195,6 @@ def produs_mod_n(T,M,mode):
     axes_inv = permutare_inv(N, mode) #aducem modul inapoi pe pozitia lui originala
     B = np.transpose(B_permutat, axes_inv)
     return B
-
 #tucker zice : fie un tensor A, exista un tensor mic G si trei matrici U^(1), U^(2), U^(3) din care se poate reconstrui o aproximare buna a lui A
 #hosvd parcurge fiecare mod , matricizeaza, aplica SVD , pastreaza primele R_n coloane si apoi calculeaza core tensor ul cu produse mod-n succesive
 #hosvd nu da aproximarea optima (pt obtim trebuie HOOI - higher order orthogonal iteration)
@@ -224,7 +223,7 @@ def HOSVD(tensor, ranguri):
     G = tensor.copy().astype(float)
     for n in range(N):
         # U_n^T are shape (R_n, I_n) — comprima dimensiunea n din I_n in R_n
-        G = produs_mod_n(G, Us[n].T, n)
+        G = mode_n_product(G, Us[n].T, n)
     return G, Us
 
 #G si Us sunt o reprezentare comprimata a tensorului original
@@ -236,7 +235,7 @@ def reconstruct(G, Us):
     A_aprox = G.copy().astype(float)
     for n in range(N):
         # U_n are shape (I_n, R_n) — redimensioneaza dimensiunea modului n din R_n in I_n
-        A_aprox = produs_mod_n(A_aprox, Us[n], n)
+        A_aprox = mode_n_product(A_aprox, Us[n], n)
     return A_aprox
 
 #calculam si eroare de reconstructie in norma frobenius : eroare = || A - A_aprox ||_F
@@ -261,5 +260,4 @@ def margine_teoretica(tensor, ranguri):
         R_n = ranguri[n]
         for i in range(R_n, len(sigmas)):
             suma_patrate = suma_patrate + sigmas[i] ** 2
-    return np.sqrt(suma_patrate)
-
+    return np.sqrt(suma_patrate)            
