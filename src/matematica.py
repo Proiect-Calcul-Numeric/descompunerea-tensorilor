@@ -134,6 +134,13 @@ def SVD(A, TOL=1e-14):
     np.fill_diagonal(S, sigmas)
     return U, S , V.T
 
+def SVD_redus(A,r,TOL=1e-14):
+    U, S, Vt = SVD(A, TOL)
+    U_r  = U[:, :r]
+    S_r  = S[:r, :r]
+    Vt_r = Vt[:r, :]
+    return U_r, S_r, Vt_r
+
 #functii pentru tensori
 #matricizarea foloseste ca argumente tensorul T si modul in care vrem sa il matricizam (1,2,3)
 #permutare construieste permutarea de axe care muta "mode" pe pozitia 0 , lasand restul in ordine crescatoare
@@ -216,9 +223,7 @@ def HOSVD(tensor, ranguri):
     for n in range(N):
         A_n = matricize(tensor, n)
         # retinem doar U , V si S nu ne intereseaza pentru HOSVD
-        U, S, Vt = SVD(A_n)
-        # pastram primele R_n coloane din U 
-        U_trunchiat = U[:, :ranguri[n]]
+        U_trunchiat, _, _ = SVD_redus(A_n, ranguri[n])
         Us.append(U_trunchiat)
     G = tensor.copy().astype(float)
     for n in range(N):
