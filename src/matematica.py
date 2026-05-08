@@ -177,9 +177,9 @@ def matricize(T,mode):
 # se bazeaza pe proprietatea: (T x_n M)_(n) = M @ T_(n)
 # adica produsul mod-n e echivalent cu o inmultire matriceala aplicata pe matricizarea tensorului.
 def produs_mod_n(T,M,mode):
-    N   = T.ndim
-    I_n = T.shape[mode]
-    J   = M.shape[0]
+    N   = T.ndim #ndim - number of array dimensions
+    I_n = T.shape[mode] #dimensiunea modului pe care aplicam M
+    J   = M.shape[0] #numarul de linii al matricei M
     assert M.shape[1] == I_n, (
         f"Dimensiunile nu se potrivesc: "
         f"M are {M.shape[1]} coloane dar modul {mode} are dimensiunea {I_n}"
@@ -195,3 +195,71 @@ def produs_mod_n(T,M,mode):
     axes_inv = permutare_inv(N, mode) #aducem modul inapoi pe pozitia lui originala
     B = np.transpose(B_permutat, axes_inv)
     return B
+
+#tucker zice : fie un tensor A, exista un tensor mic G si trei matrici U^(1), U^(2), U^(3) din care se poate reconstrui o aproximare buna a lui A
+#hosvd parcurge fiecare mod , matricizeaza, aplica SVD , pastreaza primele R_n coloane si apoi calculeaza core tensor ul cu produse mod-n succesive
+#hosvd nu da aproximarea optima (pt obtim trebuie HOOI - higher order orthogonal iteration)
+#fie o matrice A care apartine lui R ^ (I1,I2,I3). tucker decomposition ne da:
+# A = G x1 U1 x2 U2 x3 U3
+# G este core tensor, iar U^(n) sunt matrici cu coloane ortonormate
+# coloanele lui U^(n) sunt vectori proprii ai lui A*A.T; coloanele R_n din U reprezinta cata informatie vreau sa pastrez pe modul n. daca pastrez tot , constructia e exacta
+# de ce primele Rn coloane din U(n)? dupa ce facem SVD pe A(n) coloanele lui U(n) ies automat ordonate dupa importanta , prima coloana capteaza cea mai mare variatie, a doua mai putina si tot asa.
+#valorile singulare sigma spun cat de importanta este fiecare coloana. daca de exemplu sigma_3 e aproape 0 inseamna ca a treia coloana nu contribuie aproape deloc
+# rezumat : R_n coloane din U(n) = cei mai buni R_n vectori ortonormati care descriu cum variaza tensorul de a lungul modului n
+# core tensor ul G e tensorul original exprimat intr un nou sistem de coordonate comprimat
+
+def HOSVD(tensor, ranguri):
+    N = tensor.ndim
+    assert len(ranguri) == N, "Numarul de ranguri trebuie sa fie egal cu numarul de moduri"
+    for n in range(N):
+        assert ranguri[n] <= tensor.shape[n], "Rangul trebuie sa fie mai mic sau egal cu dimensiunea modului"
+    Us = [] 
+    for n in range(N):
+        A_n = matricize(tensor, n)
+        # retinem doar U , V si S nu ne intereseaza pentru HOSVD
+        U, S, Vt = SVD(A_n)
+        # pastram primele R_n coloane din U 
+        U_trunchiat = U[:, :ranguri[n]]
+        Us.append(U_trunchiat)
+    G = tensor.copy().astype(float)
+    for n in range(N):
+        # U_n^T are shape (R_n, I_n) — comprima dimensiunea n din I_n in R_n
+        G = produs_mod_n(G, Us[n].T, n)
+    return G, Us
+
+#G si Us sunt o reprezentare comprimata a tensorului original
+#acum trebuie reconstruit tensorul aproximat din G si Us
+#hosvd comprima , reconstruct decomprima
+
+def reconstruct(G, Us):
+    N = G.ndim
+    A_aprox = G.copy().astype(float)
+    for n in range(N):
+        # U_n are shape (I_n, R_n) — redimensioneaza dimensiunea modului n din R_n in I_n
+        A_aprox = produs_mod_n(A_aprox, Us[n], n)
+    return A_aprox
+
+#calculam si eroare de reconstructie in norma frobenius : eroare = || A - A_aprox ||_F
+
+def tucker_error(tensor_original, G, Us):
+    tensor_aprox = reconstruct(G, Us)
+    diferenta = tensor_original - tensor_aprox
+    return norma_frobenius(diferenta.ravel())
+
+# pentru tensori mari e de preferat sa calculam eroarea inainte de a reconstrui
+# folosim teorema eckhart-young care zice ca suma patratelor valorilor singulare de la r+1 incolo sub radical este egala cu eroarea
+# marginea teoretica permite estimarea erorii fara reconstructie
+
+def margine_teoretica(tensor, ranguri):
+    N = tensor.ndim
+    suma_patrate = 0.0
+    for n in range(N):
+        A_n = matricize(tensor, n)
+        # valorile singulare ale matricizarii
+        U, S, Vt = SVD(A_n)
+        sigmas = np.diag(S)
+        R_n = ranguri[n]
+        for i in range(R_n, len(sigmas)):
+            suma_patrate = suma_patrate + sigmas[i] ** 2
+    return np.sqrt(suma_patrate)
+
