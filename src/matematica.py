@@ -34,7 +34,7 @@ def QR_Householder(A):
     R = np.copy(A).astype(float)
     Q = np.eye(m)
     
-    for k in range(n):
+    for k in range(min(m,n)):
         x = np.copy(R[k:, k])
         norm_x = norma_frobenius(x)
         
