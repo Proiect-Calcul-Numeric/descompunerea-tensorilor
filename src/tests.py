@@ -90,6 +90,8 @@ def test_QR_Gram_Schmidt(nr_teste_randomizate=10,matrici_test=genereaza_matrici_
                 assert np.allclose(Q_nenul.T @ Q_nenul,np.eye(Q_nenul.shape[1])), f"Coloanele nenule din Q nu sunt ortonormale:\n{Q_nenul.T @ Q_nenul}"
     print("Toate testele pentru QR_Gram_Schmidt au trecut")
 
+#def test_QR_Householder(nr_teste_randomizate=10,matrici_test=genereaza_matrici_test()):
+
 def __main__():
     test_norma()
     test_QR_Gram_Schmidt()

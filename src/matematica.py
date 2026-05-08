@@ -9,6 +9,9 @@ def QR_Gram_Schmidt(A):
     m, n = A.shape
     Q = np.copy(A).astype(float)
     R = np.zeros((n, n))
+
+    if(np.all(A == 0)): #caz special pentru matricea nula , toate coloanele sunt deja ortogonale si norma e zero
+        return Q, R
     
     for k in range(n):
         for i in range(k):
