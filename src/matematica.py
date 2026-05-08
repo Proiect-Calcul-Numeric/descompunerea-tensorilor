@@ -136,5 +136,62 @@ def SVD(A, TOL=1e-14):
 
 #functii pentru tensori
 #matricizarea foloseste ca argumente tensorul T si modul in care vrem sa il matricizam (1,2,3)
-
-def transpose_axes()
+#permutare construieste permutarea de axe care muta "mode" pe pozitia 0 , lasand restul in ordine crescatoare
+#de ex daca dimensiunea e 3 : mod 0 -> (0,1,2); mod 1 -> (1,0,2); mod 2 -> (2,0,1)
+def permutare(N,mode):
+    axes = [mode]               # modul ales vine primul
+    for i in range(N):
+        if i != mode:           # adaugam toti ceilalti, in ordine
+            axes.append(i)
+    return axes
+def permutare_inv(N,mode):
+    axes = permutare(N, mode)
+    inversa = [0] * N
+    for pozitie in range(N):
+        ax = axes[pozitie]      # axa originala care a ajuns pe `pozitie`
+        inversa[ax] = pozitie   # ea trebuie sa se intoarca pe pozitia `pozitie`
+    return inversa
+def matricize(T,mode):
+    N = T.ndim
+    # permutarea care pune `mode` pe pozitia 0
+    axes = permutare(N, mode)
+    # permutarea axelor tensorilor
+    T_permutat = np.transpose(T, axes)
+    # calculam numarul de coloane
+    # produsul tuturor dimensiunilor in afara de `mode`
+    nr_coloane = 1
+    for i in range(N):
+        if i != mode:
+            nr_coloane = nr_coloane * T.shape[i]
+    nr_linii = T.shape[mode]
+    # aplatizam tensorul intr-o matrice (nr_linii x nr_coloane)
+    T_matricizat = T_permutat.reshape(nr_linii, nr_coloane)
+    return T_matricizat
+# exemplu produsul mode-n : fie un tensor A care apartine lui R^(2x3x2) si o matrice M care apartine lui R^(4x2)
+# rezultatul este un tensor B
+# de fapt, matricizam tensorul pe modul n , inmultim matriceal si apoi refacem tensorul
+# adica spre exemplu : matricizam A pe modul 1,apoi inmultesc M cu A(1) si ne va da o matrice B de mod 1 care apartine lui R^(4x6)
+# apoi refacem tensorul B , primele 3 coloane -> slice 1, urmatoarele 3 coloane -> slice 2;
+# functia : T tensor de forma I_0 ... I_N-1 ; M matrice de forma J , I_mode ; mode : indicele modului pe care aplicam M
+# rezultatul are aceeasi forma ca T cu exceptia dimensiunii mode care se schimba din I_mode in J
+# se bazeaza pe proprietatea: (T x_n M)_(n) = M @ T_(n)
+# adica produsul mod-n e echivalent cu o inmultire matriceala aplicata pe matricizarea tensorului.
+def produs_mod_n(T,M,mode):
+    N   = T.ndim
+    I_n = T.shape[mode]
+    J   = M.shape[0]
+    assert M.shape[1] == I_n, (
+        f"Dimensiunile nu se potrivesc: "
+        f"M are {M.shape[1]} coloane dar modul {mode} are dimensiunea {I_n}"
+    )
+    T_matricizat = matricize(T, mode)
+    B_matricizat = M @ T_matricizat
+    axes = permutare(N,mode) #reconstruim tensorul din matrice , mode ul e pe pozitia 0 cu noua dimensiune J
+    forma_permutata = [J]
+    for i in range(1,N): #restul dimensiunilor in ordinea permutarii
+        ax = axes[i]
+        forma_permutata.append(T.shape[ax])
+    B_permutat = B_matricizat.reshape(forma_permutata)
+    axes_inv = permutare_inv(N, mode) #aducem modul inapoi pe pozitia lui originala
+    B = np.transpose(B_permutat, axes_inv)
+    return B
