@@ -117,9 +117,50 @@ def test_QR_Householder(nr_teste_randomizate=10,matrici_test=genereaza_matrici_t
                 assert np.allclose(Q_nenul.T @ Q_nenul,np.eye(Q_nenul.shape[1])), f"Coloanele nenule din Q nu sunt ortonormale:\n{Q_nenul.T @ Q_nenul}"
     print("Toate testele pentru QR_Householder au trecut")
 
-def __main__():
-    test_norma()
-    test_QR_Gram_Schmidt()
-    test_QR_Householder()
+#tridiagonalizare
+def este_tridiagonala(A, tol=1e-10):
+    n, m = A.shape
 
+    if n != m:
+        return False
+
+    for i in range(n):
+        for j in range(n):
+            if abs(i - j) > 1 and not np.isclose(A[i, j], 0, atol=tol):
+                return False
+
+    return True
+
+def test_tridiagonalizare(nr_teste_randomizate=10):
+    for i in range(nr_teste_randomizate):
+        A = np.random.rand(10, 10)
+        A= (A + A.T) / 2
+
+        Q,T = Tridiag_Householder(A)
+        assert np.allclose(Q @ T @ Q.T, A), f"Testul {i+1} a eșuat, Q @ T @ Q.T: {Q @ T @ Q.T}, A: {A}"
+        assert este_tridiagonala(T), f"Testul {i+1} a eșuat, T nu este tridiagonală:\n{T}"
+        assert np.allclose(Q.T @ Q, np.eye(Q.shape[1])), f"Testul {i+1} a eșuat, Q.T @ Q: {Q.T @ Q}, I: {np.eye(Q.shape[1])}"
+        assert np.allclose(T, T.T), f"Testul {i+1} a eșuat, T nu este simetrică:\n{T}"
+        assert np.allclose(np.sort(np.linalg.eigvals(T)),np.sort(np.linalg.eigvals(A))), f"Testul {i+1} a eșuat, valorile proprii ale lui T nu sunt egale cu cele ale lui A:\nValorile proprii T:\n {np.linalg.eigvals(T)}, \nValorile proprii A: \n{np.linalg.eigvals(A)}"
+    print("Toate testele pentru tridiagonalizare au trecut")
+
+def test_QR_iteration_aproximare_valori_proprii(nr_teste_randomizate=10):
+    for i in range(nr_teste_randomizate):
+        A = np.random.rand(100, 100)
+        A= (A + A.T) / 2
+        Q, T = Tridiag_Householder(A)
+        T_final, Q_final = QR_iteration(A, Q)
+        assert np.allclose(np.sort(np.linalg.eigvals(T_final)),np.sort(np.linalg.eigvals(A))), f"Testul {i+1} a eșuat, valorile proprii ale lui T_final nu sunt egale cu cele ale lui A:\nValorile proprii T_final:\n {np.linalg.eigvals(T_final)}, \nValorile proprii A: \n{np.linalg.eigvals(A)}"
+    print("Toate testele pentru QR_iteration_aproximare_valori_proprii au trecut")
+    
+def __main__():
+    teste=1
+    test_norma(teste)
+    test_QR_Gram_Schmidt(teste)
+    test_QR_Householder(teste)
+    test_tridiagonalizare(teste)
+    start_time = time.time()
+    test_QR_iteration_aproximare_valori_proprii(teste)
+    end_time = time.time()
+    print(f"Testele {teste} pentru QR_iteration_aproximare_valori_proprii au durat {end_time - start_time:.4f} secunde")
 __main__()

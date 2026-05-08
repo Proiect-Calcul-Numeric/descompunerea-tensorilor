@@ -90,16 +90,24 @@ def Tridiag_Householder(A):
         
     return Q, T
 
-def QR_iteration(A, Q, TOL=1e-6):
+def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
     T = Q.T @ A @ Q
     V = np.copy(Q)
+    n = T.shape[0]
+    I = np.eye(n)
 
-    while norma_extra_diag(T) > TOL: 
-        Q_k, R_k = QR_Gram_Schmidt(T)
-        T = R_k @ Q_k
-        V = V @ Q_k  
+    iteratii = 0
+    while norma_extra_diag(T) > TOL and iteratii < max_iter:
+        mu = T[n - 1, n - 1]  # shift simplu adaugat pentru a accelera convergenta
+
+        Q_k, R_k = QR_Gram_Schmidt(T - mu * I)
+        T = R_k @ Q_k + mu * I
+
+        V = V @ Q_k
+        iteratii += 1
 
     return T, V
+
 
 def SVD(A, TOL=1e-14):
     ATA = A.T @ A
