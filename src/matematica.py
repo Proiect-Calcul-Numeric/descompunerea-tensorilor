@@ -29,11 +29,13 @@ def norma_extra_diag(A):
     A_fara_diag = A - np.diag(np.diagonal(A))
     return norma_frobenius(A_fara_diag)
 
-def QR_Householder(A):
+def QR_Householder(A,TOL=1e-4):
     m, n = A.shape
     R = np.copy(A).astype(float)
     Q = np.eye(m)
     
+    prag = max(TOL * norma_frobenius(R), 1e-30)
+
     for k in range(min(m,n)):
         x = np.copy(R[k:, k])
         norm_x = norma_frobenius(x)
@@ -46,7 +48,7 @@ def QR_Householder(A):
         v = x - alpha * e0
         
         norm_v = norma_frobenius(v)
-        if norm_v > 1e-14:
+        if norm_v > prag:
             v = v / norm_v
             H_k = np.eye(m - k) - 2 * np.outer(v, v)
         else:
@@ -90,17 +92,29 @@ def Tridiag_Householder(A):
         
     return Q, T
 
+def toate_extra_diag_sub_prag(A, prag):
+    A_fara_diag = A - np.diag(np.diagonal(A))
+    return np.all(np.abs(A_fara_diag) <= prag)
+
 def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
     T = Q.T @ A @ Q
     V = np.copy(Q)
     n = T.shape[0]
     I = np.eye(n)
 
-    iteratii = 0
-    while norma_extra_diag(T) > TOL and iteratii < max_iter:
-        mu = T[n - 1, n - 1]  # shift simplu adaugat pentru a accelera convergenta
+    prag = max(TOL * norma_frobenius(T), 1e-30)
 
-        Q_k, R_k = QR_Gram_Schmidt(T - mu * I)
+    iteratii = 0
+    while not toate_extra_diag_sub_prag(T, prag) and iteratii < max_iter:
+        # shift Wilkinson pentru a evita stagnarea pe blocuri 2x2
+        if n >= 2:
+            delta = (T[n - 2, n - 2] - T[n - 1, n - 1]) / 2
+            semn = 1 if delta >= 0 else -1
+            mu = T[n - 1, n - 1] - semn * T[n - 1, n - 2] ** 2 / (abs(delta) + np.sqrt(delta ** 2 + T[n - 1, n - 2] ** 2))
+        else:
+            mu = T[n - 1, n - 1]
+
+        Q_k, R_k = QR_Householder(T - mu * I)
         T = R_k @ Q_k + mu * I
 
         V = V @ Q_k
@@ -122,12 +136,20 @@ def SVD(A, TOL=1e-14):
     S=np.diag(sigmas) #matricea sigma
     m, n=A.shape
     U = np.zeros((m, m)) 
+    # prag relativ pentru valori singulare numeric stabile
+    prag_sigma = TOL * max(A.shape) * sigmas[0] if len(sigmas) > 0 else TOL
     r = 0 # contor pt vectorii deja adaugati in U
-    for i in range(len(sigmas)):
-        if sigmas[i] > TOL:
-            U[:, i] = (A @ V[:, i]) / sigmas[i]
-            r += 1
-    # gram schmidt - folosesc vectorii bazei canonice (matricea identitate) pe care ii ortogonalizez
+    for i in range(min(n, m)):
+        if sigmas[i] > prag_sigma:
+            # re-ortonormalizam coloanele calculate din A @ V
+            u = (A @ V[:, i]) / sigmas[i]
+            for j in range(r):
+                u = u - np.dot(U[:, j], u) * U[:, j]
+            norm_u = norma_frobenius(u)
+            if norm_u > TOL:
+                U[:, r] = u / norm_u
+                r += 1
+    # completam U la o baza ortonormala
     I=np.eye(m)
     curent_col = r
     for k in range(m):

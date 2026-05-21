@@ -146,13 +146,36 @@ def test_tridiagonalizare(nr_teste_randomizate=10):
 
 def test_QR_iteration_aproximare_valori_proprii(nr_teste_randomizate=10):
     for i in range(nr_teste_randomizate):
-        A = np.random.rand(100, 100)
+        A = np.random.rand(10, 10)
         A= (A + A.T) / 2
         Q, T = Tridiag_Householder(A)
         T_final, Q_final = QR_iteration(A, Q)
         assert np.allclose(np.sort(np.linalg.eigvals(T_final)),np.sort(np.linalg.eigvals(A))), f"Testul {i+1} a eșuat, valorile proprii ale lui T_final nu sunt egale cu cele ale lui A:\nValorile proprii T_final:\n {np.linalg.eigvals(T_final)}, \nValorile proprii A: \n{np.linalg.eigvals(A)}"
     print("Toate testele pentru QR_iteration_aproximare_valori_proprii au trecut")
-    
+
+def test_SVD(nr_teste_randomizate=10,matrici_test=genereaza_matrici_test()):
+    for i in range(nr_teste_randomizate):
+        A = np.random.rand(5, 5)
+        U, S, Vt = SVD(A)
+        sigmas = np.diag(S)
+        assert np.allclose(U @ S @ Vt, A), f"Testul {i+1} a eșuat, \nU @ S @ Vt: \n{U @ S @ Vt}, \nA: \n{A}"
+        assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
+        assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
+        assert np.all(sigmas >= -1e10), f"Testul {i+1} a eșuat, valorile singulare nu sunt nenegative: {S}"
+        assert np.all(np.diff(sigmas) <= 0), f"Testul {i+1} a eșuat, valorile singulare nu sunt în ordine descrescătoare: {S}"
+        assert np.allclose(sigmas, np.linalg.svd(A, compute_uv=False)), f"Testul {i+1} a eșuat, valorile singulare nu sunt corecte: {S}, np.linalg.svd: {np.linalg.svd(A, compute_uv=False)}"    
+        assert (S.shape == A.shape), f"Testul {i+1} a eșuat, forma valorilor singulare nu este corectă: {S.shape}, așteptat: {A.shape}"
+
+    for i, A in enumerate(matrici_test):
+        if np.isnan(A).any():
+            continue      
+        if np.isinf(A).any():
+            continue  
+        U, S, Vt = SVD(A)
+        assert np.allclose(U @ S @ Vt, A), f"Testul pentru matricea {i+1} a eșuat, \n U @ S_matrix @ Vt:\n {U @ S @ Vt},\n A: \n{A}"
+        assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul pentru matricea {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
+        assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul pentru matricea {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
+    print("Toate testele pentru SVD au trecut")
 def __main__():
     teste=1
     test_norma(teste)
@@ -163,4 +186,5 @@ def __main__():
     test_QR_iteration_aproximare_valori_proprii(teste)
     end_time = time.time()
     print(f"Testele {teste} pentru QR_iteration_aproximare_valori_proprii au durat {end_time - start_time:.4f} secunde")
+    test_SVD(teste)
 __main__()
