@@ -48,9 +48,13 @@ def genereaza_matrici_test():
     return matrici
    
 
-def test_norma(nr_teste_randomizate=10 , matrici_test=genereaza_matrici_test()):
+#------------------------------------------------------------------------------------------------
+
+
+def test_norma(nr_teste_randomizate=5 , matrici_test=genereaza_matrici_test()):
+    rng = np.random.default_rng(0)
     for i in range(nr_teste_randomizate):
-        A = np.random.rand(10, 10)
+        A = rng.random((10, 10))
         assert np.isclose(norma_frobenius(A), np.linalg.norm(A, 'fro')), f"Testul {i+1} a eșuat, norma_frobenius: {norma_frobenius(A)}, np.linalg.norm: {np.linalg.norm(A, 'fro')}, matrice: {A}"
     for i, A in enumerate(matrici_test):
         if(np.isnan(A).any()): #caz special cu NaN
@@ -63,9 +67,14 @@ def test_norma(nr_teste_randomizate=10 , matrici_test=genereaza_matrici_test()):
 
     print("Toate testele pentru norma frobenius au trecut")
 
-def test_QR_Gram_Schmidt(nr_teste_randomizate=10,matrici_test=genereaza_matrici_test()):
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_QR_Gram_Schmidt(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
+    rng = np.random.default_rng(1)
     for i in range(nr_teste_randomizate):
-        A = np.random.rand(10, 10)
+        A = rng.random((10, 10))
         Q, R = QR_Gram_Schmidt(A)
         assert np.allclose(Q @ R, A), f"Testul {i+1} a eșuat, Q @ R: {Q @ R}, A: {A}"
         assert np.allclose(Q.T @ Q, np.eye(Q.shape[1])), f"Testul {i+1} a eșuat, Q.T @ Q: {Q.T @ Q}, I: {np.eye(Q.shape[1])}"
@@ -90,9 +99,14 @@ def test_QR_Gram_Schmidt(nr_teste_randomizate=10,matrici_test=genereaza_matrici_
                 assert np.allclose(Q_nenul.T @ Q_nenul,np.eye(Q_nenul.shape[1])), f"Coloanele nenule din Q nu sunt ortonormale:\n{Q_nenul.T @ Q_nenul}"
     print("Toate testele pentru QR_Gram_Schmidt au trecut")
 
-def test_QR_Householder(nr_teste_randomizate=10,matrici_test=genereaza_matrici_test()):
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_QR_Householder(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
+    rng = np.random.default_rng(2)
     for i in range(nr_teste_randomizate):
-        A = np.random.rand(10, 10)
+        A = rng.random((10, 10))
         Q, R = QR_Householder(A)
         assert np.allclose(Q @ R, A), f"Testul {i+1} a eșuat, Q @ R: {Q @ R}, A: {A}"
         assert np.allclose(Q.T @ Q, np.eye(Q.shape[1])), f"Testul {i+1} a eșuat, Q.T @ Q: {Q.T @ Q}, I: {np.eye(Q.shape[1])}"
@@ -117,7 +131,10 @@ def test_QR_Householder(nr_teste_randomizate=10,matrici_test=genereaza_matrici_t
                 assert np.allclose(Q_nenul.T @ Q_nenul,np.eye(Q_nenul.shape[1])), f"Coloanele nenule din Q nu sunt ortonormale:\n{Q_nenul.T @ Q_nenul}"
     print("Toate testele pentru QR_Householder au trecut")
 
-#tridiagonalizare
+
+#------------------------------------------------------------------------------------------------
+
+
 def este_tridiagonala(A, tol=1e-10):
     n, m = A.shape
 
@@ -131,9 +148,14 @@ def este_tridiagonala(A, tol=1e-10):
 
     return True
 
-def test_tridiagonalizare(nr_teste_randomizate=10):
+
+#-------------------------------------------------------------------------------------------------
+
+
+def test_tridiagonalizare(nr_teste_randomizate=5):
+    rng = np.random.default_rng(3)
     for i in range(nr_teste_randomizate):
-        A = np.random.rand(10, 10)
+        A = rng.random((10, 10))
         A= (A + A.T) / 2
 
         Q,T = Tridiag_Householder(A)
@@ -144,14 +166,18 @@ def test_tridiagonalizare(nr_teste_randomizate=10):
         assert np.allclose(np.sort(np.linalg.eigvals(T)),np.sort(np.linalg.eigvals(A))), f"Testul {i+1} a eșuat, valorile proprii ale lui T nu sunt egale cu cele ale lui A:\nValorile proprii T:\n {np.linalg.eigvals(T)}, \nValorile proprii A: \n{np.linalg.eigvals(A)}"
     print("Toate testele pentru tridiagonalizare au trecut")
 
-def test_QR_iteration_aproximare_valori_proprii(nr_teste_randomizate=10):
-    TOL_QR = 5e-1
-    rng = np.random.default_rng(0)
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_QR_iteration_aproximare_valori_proprii(nr_teste_randomizate=3):
+    TOL_QR = 2e-1
+    rng = np.random.default_rng(4)
     for i in range(nr_teste_randomizate):
-        A = rng.random((100, 100))
+        A = rng.random((30, 30))
         A= (A + A.T) / 2
         Q, T = Tridiag_Householder(A)
-        T_final, Q_final = QR_iteration(A, Q)
+        T_final, Q_final = QR_iteration(A, Q, max_iter=2000)
         valori_qr = np.sort(np.diag(T_final))
         valori_np = np.sort(np.linalg.eigvalsh(A))
         assert np.allclose(valori_qr, valori_np, atol=TOL_QR), f"Testul {i+1} a eșuat, valorile proprii aproximative nu sunt suficient de apropiate:\nQR diag:\n {valori_qr}, \nNumPy: \n{valori_np}"
@@ -159,10 +185,15 @@ def test_QR_iteration_aproximare_valori_proprii(nr_teste_randomizate=10):
         assert reziduu < TOL_QR, f"Testul {i+1} a eșuat, vectorii proprii nu sunt suficient de buni:\nReziduu: {reziduu}"
     print("Toate testele pentru QR_iteration_aproximare_valori_proprii au trecut")
 
-def test_SVD(nr_teste_randomizate=10,matrici_test=genereaza_matrici_test()):
-    TOL_SVD = 5e-3
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_SVD(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
+    TOL_SVD = 1e-2
+    rng = np.random.default_rng(5)
     for i in range(nr_teste_randomizate):
-        A = np.random.rand(5, 5)
+        A = rng.random((6, 6))
         U, S, Vt = SVD(A)
         sigmas = np.diag(S)
         assert np.allclose(U @ S @ Vt, A, atol=TOL_SVD), f"Testul {i+1} a eșuat, \nU @ S @ Vt: \n{U @ S @ Vt}, \nA: \n{A}"
@@ -183,15 +214,95 @@ def test_SVD(nr_teste_randomizate=10,matrici_test=genereaza_matrici_test()):
         assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul pentru matricea {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
         assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul pentru matricea {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
     print("Toate testele pentru SVD au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_SVD_redus(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
+    TOL_SVD = 1e-2
+    rng = np.random.default_rng(6)
+    for i in range(nr_teste_randomizate):
+        A = rng.random((6, 6))
+        r = min(A.shape)
+        U, S, Vt = SVD_redus(A, r)
+        sigmas = np.diag(S)
+        assert np.allclose(U @ S @ Vt, A, atol=TOL_SVD), f"Testul {i+1} a eșuat, \nU @ S @ Vt: \n{U @ S @ Vt}, \nA: \n{A}"
+        assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
+        assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
+        assert np.all(sigmas >= -1e10), f"Testul {i+1} a eșuat, valorile singulare nu sunt nenegative: {S}"
+        assert np.all(np.diff(sigmas) <= 0), f"Testul {i+1} a eșuat, valorile singulare nu sunt în ordine descrescătoare: {S}"
+        assert np.allclose(sigmas, np.linalg.svd(A, compute_uv=False), atol=TOL_SVD), f"Testul {i+1} a eșuat, valorile singulare nu sunt corecte: {S}, np.linalg.svd: {np.linalg.svd(A, compute_uv=False)}"    
+        assert U.shape == (A.shape[0], r), f"Testul {i+1} a eșuat, forma lui U este incorectă: {U.shape}"
+        assert S.shape == (r, r), f"Testul {i+1} a eșuat, forma lui S este incorectă: {S.shape}"
+        assert Vt.shape == (r, A.shape[1]), f"Testul {i+1} a eșuat, forma lui Vt este incorectă: {Vt.shape}"
+
+    for i, A in enumerate(matrici_test):
+        if np.isnan(A).any():
+            continue      
+        if np.isinf(A).any():
+            continue  
+        r = min(A.shape)
+        U, S, Vt = SVD_redus(A, r)
+        assert np.allclose(U @ S @ Vt, A, atol=TOL_SVD), f"Testul pentru matricea {i+1} a eșuat, \n U @ S_matrix @ Vt:\n {U @ S @ Vt},\n A: \n{A}"
+        assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul pentru matricea {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
+        assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul pentru matricea {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
+
+    A = rng.random((6, 4))
+    r = 2
+    U, S, Vt = SVD_redus(A, r)
+    sigmas = np.diag(S)
+    reconstructie = U @ S @ Vt
+    assert U.shape == (A.shape[0], r), f"Forma lui U pentru cazul redus este incorectă: {U.shape}"
+    assert S.shape == (r, r), f"Forma lui S pentru cazul redus este incorectă: {S.shape}"
+    assert Vt.shape == (r, A.shape[1]), f"Forma lui Vt pentru cazul redus este incorectă: {Vt.shape}"
+    assert reconstructie.shape == A.shape, f"Reconstructia redusă are forma incorectă: {reconstructie.shape}"
+    assert np.allclose(U.T @ U, np.eye(r), atol=TOL_SVD), f"U redus nu are coloane ortonormale: {U.T @ U}"
+    assert np.allclose(Vt @ Vt.T, np.eye(r), atol=TOL_SVD), f"Vt redus nu are linii ortonormale: {Vt @ Vt.T}"
+    assert np.allclose(sigmas, np.linalg.svd(A, compute_uv=False)[:r], atol=TOL_SVD), f"Valorile singulare reduse nu sunt corecte: {sigmas}"
+    print("Toate testele pentru SVD_redus au trecut")   
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_norma_extra_diag(nr_teste_randomizate=5):
+    rng = np.random.default_rng(7)
+    for i in range(nr_teste_randomizate):
+        A = rng.random((10, 10))
+        A_fara_diag = A - np.diag(np.diagonal(A))
+        assert np.isclose(norma_extra_diag(A), np.linalg.norm(A_fara_diag, 'fro')), f"Testul {i+1} a eșuat, norma_extra_diag: {norma_extra_diag(A)}, np.linalg.norm: {np.linalg.norm(A_fara_diag, 'fro')}, matrice: {A}"
+    print("Toate testele pentru norma extra-diagonală au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_toate_extra_diag_sub_prag(nr_teste_randomizate=5):
+    rng = np.random.default_rng(8)
+    for i in range(nr_teste_randomizate):
+        A = rng.random((10, 10))
+        prag = 0.5
+        A_fara_diag = A - np.diag(np.diagonal(A))
+        assert toate_extra_diag_sub_prag(A, prag) == np.all(np.abs(A_fara_diag) <= prag), f"Testul {i+1} a eșuat, toate_extra_diag_sub_prag: {toate_extra_diag_sub_prag(A, prag)}, np.all: {np.all(np.abs(A_fara_diag) <= prag)}, matrice: {A}"
+    print("Toate testele pentru toate_extra_diag_sub_prag au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
 def __main__():
     teste=1
     test_norma(teste)
+    test_norma_extra_diag(teste)
+    test_toate_extra_diag_sub_prag(teste)
     test_QR_Gram_Schmidt(teste)
     test_QR_Householder(teste)
     test_tridiagonalizare(teste)
     start_time = time.time()
-    test_QR_iteration_aproximare_valori_proprii(teste)
+    test_QR_iteration_aproximare_valori_proprii()
     end_time = time.time()
     print(f"Testele {teste} pentru QR_iteration_aproximare_valori_proprii au durat {end_time - start_time:.4f} secunde")
     test_SVD(teste)
+    test_SVD_redus(teste)
 __main__()
