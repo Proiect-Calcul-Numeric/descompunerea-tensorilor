@@ -103,7 +103,6 @@ def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
     I = np.eye(n)
 
     prag = max(TOL * norma_frobenius(T), 1e-30)
-
     iteratii = 0
     while not toate_extra_diag_sub_prag(T, prag) and iteratii < max_iter:
         # shift Wilkinson pentru a evita stagnarea pe blocuri 2x2
@@ -119,8 +118,7 @@ def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
 
         V = V @ Q_k
         iteratii += 1
-
-    return T, V
+    return T, V #T este matricea tridiagonalizata care contine valorile proprii pe diagonala, iar V contine vectorii proprii ai lui A
 
 
 def SVD(A, TOL=1e-14):
