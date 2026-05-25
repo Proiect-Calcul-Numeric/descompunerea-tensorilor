@@ -193,7 +193,7 @@ def test_SVD(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
     TOL_SVD = 1e-2
     rng = np.random.default_rng(5)
     for i in range(nr_teste_randomizate):
-        A = rng.random((6, 6))
+        A = rng.random((10, 10))
         U, S, Vt = SVD(A)
         sigmas = np.diag(S)
         assert np.allclose(U @ S @ Vt, A, atol=TOL_SVD), f"Testul {i+1} a eșuat, \nU @ S @ Vt: \n{U @ S @ Vt}, \nA: \n{A}"
@@ -291,18 +291,153 @@ def test_toate_extra_diag_sub_prag(nr_teste_randomizate=5):
 #------------------------------------------------------------------------------------------------
 
 
+def test_permutare(nr_teste_randomizate=5):
+    rng = np.random.default_rng(9)
+    for i in range(nr_teste_randomizate):
+        n = 10
+        permutare = rng.permutation(n)
+        matrice_permutare = np.eye(n)[permutare]
+        assert np.allclose(matrice_permutare @ np.eye(n), matrice_permutare), f"Testul {i+1} a eșuat, matrice_permutare @ I: {matrice_permutare @ np.eye(n)}, matrice_permutare: {matrice_permutare}"
+        assert np.allclose(np.eye(n) @ matrice_permutare, matrice_permutare), f"Testul {i+1} a eșuat, I @ matrice_permutare: {np.eye(n) @ matrice_permutare}, matrice_permutare: {matrice_permutare}"
+    print("Toate testele pentru permutare au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_permutare_inversa(nr_teste_randomizate=5):
+    rng = np.random.default_rng(10)
+    for i in range(nr_teste_randomizate):
+        n = 10
+        permutare = rng.permutation(n)
+        matrice_permutare = np.eye(n)[permutare]
+        matrice_permutare_inversa = matrice_permutare.T
+        assert np.allclose(matrice_permutare_inversa @ matrice_permutare, np.eye(n)), f"Testul {i+1} a eșuat, matrice_permutare_inversa @ matrice_permutare: {matrice_permutare_inversa @ matrice_permutare}, I: {np.eye(n)}"
+        assert np.allclose(matrice_permutare @ matrice_permutare_inversa, np.eye(n)), f"Testul {i+1} a eșuat, matrice_permutare @ matrice_permutare_inversa: {matrice_permutare @ matrice_permutare_inversa}, I: {np.eye(n)}"
+    print("Toate testele pentru permutare inversa au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_matricize(nr_teste_randomizate=5):
+    rng = np.random.default_rng(11)
+    for i in range(nr_teste_randomizate):
+        tensor = rng.random((3, 4, 5))
+        matrice_mode_0 = matricize(tensor, mode=0)
+        matrice_mode_1 = matricize(tensor, mode=1)
+        matrice_mode_2 = matricize(tensor, mode=2)
+        assert matrice_mode_0.shape == (3, 20), f"Testul {i+1} a eșuat, forma matrice_mode_0 este incorectă: {matrice_mode_0.shape}"
+        assert matrice_mode_1.shape == (4, 15), f"Testul {i+1} a eșuat, forma matrice_mode_1 este incorectă: {matrice_mode_1.shape}"
+        assert matrice_mode_2.shape == (5, 12), f"Testul {i+1} a eșuat, forma matrice_mode_2 este incorectă: {matrice_mode_2.shape}"
+    print("Toate testele pentru matricize au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_mode_n_product(nr_teste_randomizate=5):
+    rng = np.random.default_rng(12)
+    for i in range(nr_teste_randomizate):
+        tensor = rng.random((3, 4, 5))
+        matrice = rng.random((6, 4))
+        rezultat_mode_1 = mode_n_product(tensor, matrice, mode=1)
+        assert rezultat_mode_1.shape == (3, 6, 5), f"Testul {i+1} a eșuat, forma rezultat_mode_1 este incorectă: {rezultat_mode_1.shape}"
+    print("Toate testele pentru mode_n_product au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_HOSVD(nr_teste_randomizate=5):
+    rng = np.random.default_rng(13)
+    for i in range(nr_teste_randomizate):
+        tensor = rng.random((3, 4, 5))
+        G, Us = HOSVD(tensor, tensor.shape)
+        U1, U2, U3 = Us
+        assert U1.shape == (3, 3), f"Testul {i+1} a eșuat, forma lui U1 este incorectă: {U1.shape}"
+        assert U2.shape == (4, 4), f"Testul {i+1} a eșuat, forma lui U2 este incorectă: {U2.shape}"
+        assert U3.shape == (5, 5), f"Testul {i+1} a eșuat, forma lui U3 este incorectă: {U3.shape}"
+        assert G.shape == (3, 4, 5), f"Testul {i+1} a eșuat, forma lui G este incorectă: {G.shape}"
+        reconstructie = reconstruct(G, Us)
+        assert np.allclose(reconstructie, tensor), f"Testul {i+1} a eșuat, reconstructia nu este suficient de apropiată:\nReconstructie:\n{reconstructie},\nTensor:\n{tensor}"
+    print("Toate testele pentru HOSVD au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_reconstruct(nr_teste_randomizate=5):
+    rng = np.random.default_rng(14)
+    for i in range(nr_teste_randomizate):
+        tensor = rng.random((3, 4, 5))
+        G, Us = HOSVD(tensor, tensor.shape)
+        reconstructie = reconstruct(G, Us)
+        assert np.allclose(reconstructie, tensor), f"Testul {i+1} a eșuat, reconstructia nu este suficient de apropiată:\nReconstructie:\n{reconstructie},\nTensor:\n{tensor}"
+    print("Toate testele pentru reconstruct au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_tucker_error(nr_teste_randomizate=5):
+    rng = np.random.default_rng(4)
+    for i in range(nr_teste_randomizate):
+        tensor = rng.random((3, 4, 5))
+        G, Us = HOSVD(tensor, tensor.shape)
+        reconstructie = reconstruct(G, Us)
+        eroare = np.linalg.norm(tensor - reconstructie) / np.linalg.norm(tensor)
+        assert eroare < 0.5, f"Testul {i+1} a eșuat, eroarea de aproximare este prea mare: {eroare}"
+    print("Toate testele pentru tucker_error au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
+def test_margine_teoretica(nr_teste_randomizate=5):
+    rng = np.random.default_rng(15)
+    for i in range(nr_teste_randomizate):
+        tensor = rng.random((3, 4, 5))
+        G, Us = HOSVD(tensor, tensor.shape)
+        reconstructie = reconstruct(G, Us)
+        eroare = np.linalg.norm(tensor - reconstructie) / np.linalg.norm(tensor)
+        assert eroare < 1e-10, f"Testul {i+1} a eșuat, eroarea de aproximare este prea mare: {eroare}"
+    print("Toate testele pentru margine_teoretica au trecut")
+
+
+#------------------------------------------------------------------------------------------------
+
+
 def __main__():
-    teste=1
-    test_norma(teste)
-    test_norma_extra_diag(teste)
-    test_toate_extra_diag_sub_prag(teste)
-    test_QR_Gram_Schmidt(teste)
-    test_QR_Householder(teste)
-    test_tridiagonalizare(teste)
-    start_time = time.time()
-    test_QR_iteration_aproximare_valori_proprii()
-    end_time = time.time()
-    print(f"Testele {teste} pentru QR_iteration_aproximare_valori_proprii au durat {end_time - start_time:.4f} secunde")
-    test_SVD(teste)
-    test_SVD_redus(teste)
+    teste=3
+
+    def ruleaza_test(nume_test, functie_test, *args):
+        separator = "=" * 72
+        print(f"\n{separator}")
+        print(f"Rulez testul: {nume_test}")
+        print(separator)
+        start_time = time.time()
+        functie_test(*args)
+        end_time = time.time()
+        print("-" * 72)
+        print(f"Testele {teste} pentru {nume_test} au durat {end_time - start_time:.4f} secunde")
+        print(separator)
+
+    ruleaza_test("norma frobenius", test_norma, teste)
+    ruleaza_test("norma extra-diagonală", test_norma_extra_diag, teste)
+    ruleaza_test("toate_extra_diag_sub_prag", test_toate_extra_diag_sub_prag, teste)
+    ruleaza_test("permutare", test_permutare, teste)
+    ruleaza_test("matricize", test_matricize, teste)
+    ruleaza_test("mode_n_product", test_mode_n_product, teste)
+    ruleaza_test("HOSVD", test_HOSVD, teste)
+    ruleaza_test("reconstruct", test_reconstruct, teste)
+    ruleaza_test("permutare inversa", test_permutare_inversa, teste)
+    ruleaza_test("tucker_error", test_tucker_error, teste)
+    ruleaza_test("margine teoretica", test_margine_teoretica, teste)
+    ruleaza_test("QR_Gram_Schmidt", test_QR_Gram_Schmidt, teste)
+    ruleaza_test("QR_Householder", test_QR_Householder, teste)
+    ruleaza_test("tridiagonalizare", test_tridiagonalizare, teste)
+    ruleaza_test("QR_iteration_aproximare_valori_proprii", test_QR_iteration_aproximare_valori_proprii,teste)
+    ruleaza_test("SVD", test_SVD, teste)
+    ruleaza_test("SVD_redus", test_SVD_redus, teste)
 __main__()
