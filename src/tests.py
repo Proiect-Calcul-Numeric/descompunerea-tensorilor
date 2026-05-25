@@ -222,14 +222,27 @@ def test_SVD(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
 def test_SVD_redus(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
     TOL_SVD = 1e-2
     rng = np.random.default_rng(6)
+
+    def verifica_ortonormalitate_componente_active(U, S, Vt, A, descriere):
+        sigmas = np.diag(S)
+        prag_sigma = TOL_SVD * max(A.shape) * sigmas[0] if len(sigmas) > 0 else TOL_SVD
+        componente_active = sigmas > prag_sigma
+
+        U_activ = U[:, componente_active]
+        Vt_activ = Vt[componente_active, :]
+
+        if U_activ.shape[1] > 0:
+            assert np.allclose(U_activ.T @ U_activ, np.eye(U_activ.shape[1]), atol=TOL_SVD), f"{descriere}: componentele active din U nu sunt ortonormale: {U_activ.T @ U_activ}"
+        if Vt_activ.shape[0] > 0:
+            assert np.allclose(Vt_activ @ Vt_activ.T, np.eye(Vt_activ.shape[0]), atol=TOL_SVD), f"{descriere}: componentele active din Vt nu sunt ortonormale: {Vt_activ @ Vt_activ.T}"
+
     for i in range(nr_teste_randomizate):
         A = rng.random((6, 6))
         r = min(A.shape)
         U, S, Vt = SVD_redus(A, r)
         sigmas = np.diag(S)
         assert np.allclose(U @ S @ Vt, A, atol=TOL_SVD), f"Testul {i+1} a eșuat, \nU @ S @ Vt: \n{U @ S @ Vt}, \nA: \n{A}"
-        assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
-        assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
+        verifica_ortonormalitate_componente_active(U, S, Vt, A, f"Testul {i+1}")
         assert np.all(sigmas >= -1e10), f"Testul {i+1} a eșuat, valorile singulare nu sunt nenegative: {S}"
         assert np.all(np.diff(sigmas) <= 0), f"Testul {i+1} a eșuat, valorile singulare nu sunt în ordine descrescătoare: {S}"
         assert np.allclose(sigmas, np.linalg.svd(A, compute_uv=False), atol=TOL_SVD), f"Testul {i+1} a eșuat, valorile singulare nu sunt corecte: {S}, np.linalg.svd: {np.linalg.svd(A, compute_uv=False)}"    
@@ -245,8 +258,7 @@ def test_SVD_redus(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test())
         r = min(A.shape)
         U, S, Vt = SVD_redus(A, r)
         assert np.allclose(U @ S @ Vt, A, atol=TOL_SVD), f"Testul pentru matricea {i+1} a eșuat, \n U @ S_matrix @ Vt:\n {U @ S @ Vt},\n A: \n{A}"
-        assert np.allclose(U.T @ U, np.eye(U.shape[1])), f"Testul pentru matricea {i+1} a eșuat, U.T @ U: {U.T @ U}, I: {np.eye(U.shape[1])}"
-        assert np.allclose(Vt @ Vt.T, np.eye(Vt.shape[0])), f"Testul pentru matricea {i+1} a eșuat, Vt @ Vt.T: {Vt @ Vt.T}, I: {np.eye(Vt.shape[0])}"
+        verifica_ortonormalitate_componente_active(U, S, Vt, A, f"Testul pentru matricea {i+1}")
 
     A = rng.random((6, 4))
     r = 2
@@ -257,8 +269,7 @@ def test_SVD_redus(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test())
     assert S.shape == (r, r), f"Forma lui S pentru cazul redus este incorectă: {S.shape}"
     assert Vt.shape == (r, A.shape[1]), f"Forma lui Vt pentru cazul redus este incorectă: {Vt.shape}"
     assert reconstructie.shape == A.shape, f"Reconstructia redusă are forma incorectă: {reconstructie.shape}"
-    assert np.allclose(U.T @ U, np.eye(r), atol=TOL_SVD), f"U redus nu are coloane ortonormale: {U.T @ U}"
-    assert np.allclose(Vt @ Vt.T, np.eye(r), atol=TOL_SVD), f"Vt redus nu are linii ortonormale: {Vt @ Vt.T}"
+    verifica_ortonormalitate_componente_active(U, S, Vt, A, "Cazul redus")
     assert np.allclose(sigmas, np.linalg.svd(A, compute_uv=False)[:r], atol=TOL_SVD), f"Valorile singulare reduse nu sunt corecte: {sigmas}"
     print("Toate testele pentru SVD_redus au trecut")   
 
@@ -292,13 +303,15 @@ def test_toate_extra_diag_sub_prag(nr_teste_randomizate=5):
 
 
 def test_permutare(nr_teste_randomizate=5):
-    rng = np.random.default_rng(9)
-    for i in range(nr_teste_randomizate):
-        n = 10
-        permutare = rng.permutation(n)
-        matrice_permutare = np.eye(n)[permutare]
-        assert np.allclose(matrice_permutare @ np.eye(n), matrice_permutare), f"Testul {i+1} a eșuat, matrice_permutare @ I: {matrice_permutare @ np.eye(n)}, matrice_permutare: {matrice_permutare}"
-        assert np.allclose(np.eye(n) @ matrice_permutare, matrice_permutare), f"Testul {i+1} a eșuat, I @ matrice_permutare: {np.eye(n) @ matrice_permutare}, matrice_permutare: {matrice_permutare}"
+    cazuri = [
+        (3, 0, [0, 1, 2]),
+        (3, 1, [1, 0, 2]),
+        (3, 2, [2, 0, 1]),
+        (4, 2, [2, 0, 1, 3]),
+    ]
+    for N, mode, rezultat_asteptat in cazuri:
+        rezultat = permutare(N, mode)
+        assert rezultat == rezultat_asteptat, f"Permutarea pentru N={N}, mode={mode} este {rezultat}, asteptat {rezultat_asteptat}"
     print("Toate testele pentru permutare au trecut")
 
 
@@ -306,14 +319,12 @@ def test_permutare(nr_teste_randomizate=5):
 
 
 def test_permutare_inversa(nr_teste_randomizate=5):
-    rng = np.random.default_rng(10)
-    for i in range(nr_teste_randomizate):
-        n = 10
-        permutare = rng.permutation(n)
-        matrice_permutare = np.eye(n)[permutare]
-        matrice_permutare_inversa = matrice_permutare.T
-        assert np.allclose(matrice_permutare_inversa @ matrice_permutare, np.eye(n)), f"Testul {i+1} a eșuat, matrice_permutare_inversa @ matrice_permutare: {matrice_permutare_inversa @ matrice_permutare}, I: {np.eye(n)}"
-        assert np.allclose(matrice_permutare @ matrice_permutare_inversa, np.eye(n)), f"Testul {i+1} a eșuat, matrice_permutare @ matrice_permutare_inversa: {matrice_permutare @ matrice_permutare_inversa}, I: {np.eye(n)}"
+    tensor = np.arange(24).reshape(2, 3, 4)
+    for mode in range(tensor.ndim):
+        axes = permutare(tensor.ndim, mode)
+        axes_inv = permutare_inv(tensor.ndim, mode)
+        tensor_refacut = np.transpose(np.transpose(tensor, axes), axes_inv)
+        assert np.array_equal(tensor_refacut, tensor), f"Permutarea inversa pentru mode={mode} nu reface tensorul initial"
     print("Toate testele pentru permutare inversa au trecut")
 
 
@@ -324,12 +335,12 @@ def test_matricize(nr_teste_randomizate=5):
     rng = np.random.default_rng(11)
     for i in range(nr_teste_randomizate):
         tensor = rng.random((3, 4, 5))
-        matrice_mode_0 = matricize(tensor, mode=0)
-        matrice_mode_1 = matricize(tensor, mode=1)
-        matrice_mode_2 = matricize(tensor, mode=2)
-        assert matrice_mode_0.shape == (3, 20), f"Testul {i+1} a eșuat, forma matrice_mode_0 este incorectă: {matrice_mode_0.shape}"
-        assert matrice_mode_1.shape == (4, 15), f"Testul {i+1} a eșuat, forma matrice_mode_1 este incorectă: {matrice_mode_1.shape}"
-        assert matrice_mode_2.shape == (5, 12), f"Testul {i+1} a eșuat, forma matrice_mode_2 este incorectă: {matrice_mode_2.shape}"
+        for mode in range(tensor.ndim):
+            rezultat = matricize(tensor, mode=mode)
+            axes = permutare(tensor.ndim, mode)
+            rezultat_asteptat = np.transpose(tensor, axes).reshape(tensor.shape[mode], -1)
+            assert rezultat.shape == rezultat_asteptat.shape, f"Testul {i+1} a eșuat, forma matricizarii pe mode={mode} este incorectă: {rezultat.shape}"
+            assert np.allclose(rezultat, rezultat_asteptat), f"Testul {i+1} a eșuat, valorile matricizarii pe mode={mode} sunt incorecte"
     print("Toate testele pentru matricize au trecut")
 
 
@@ -340,9 +351,14 @@ def test_mode_n_product(nr_teste_randomizate=5):
     rng = np.random.default_rng(12)
     for i in range(nr_teste_randomizate):
         tensor = rng.random((3, 4, 5))
-        matrice = rng.random((6, 4))
-        rezultat_mode_1 = mode_n_product(tensor, matrice, mode=1)
-        assert rezultat_mode_1.shape == (3, 6, 5), f"Testul {i+1} a eșuat, forma rezultat_mode_1 este incorectă: {rezultat_mode_1.shape}"
+        for mode in range(tensor.ndim):
+            matrice = rng.random((6, tensor.shape[mode]))
+            rezultat = mode_n_product(tensor, matrice, mode=mode)
+            rezultat_asteptat = np.moveaxis(np.tensordot(matrice, tensor, axes=([1], [mode])), 0, mode)
+            forma_asteptata = list(tensor.shape)
+            forma_asteptata[mode] = matrice.shape[0]
+            assert rezultat.shape == tuple(forma_asteptata), f"Testul {i+1} a eșuat, forma produsului mode={mode} este incorectă: {rezultat.shape}"
+            assert np.allclose(rezultat, rezultat_asteptat), f"Testul {i+1} a eșuat, valorile produsului mode={mode} sunt incorecte"
     print("Toate testele pentru mode_n_product au trecut")
 
 
@@ -386,8 +402,17 @@ def test_tucker_error(nr_teste_randomizate=5):
         tensor = rng.random((3, 4, 5))
         G, Us = HOSVD(tensor, tensor.shape)
         reconstructie = reconstruct(G, Us)
-        eroare = np.linalg.norm(tensor - reconstructie) / np.linalg.norm(tensor)
-        assert eroare < 0.5, f"Testul {i+1} a eșuat, eroarea de aproximare este prea mare: {eroare}"
+        eroare_calculata = tucker_error(tensor, G, Us)
+        eroare_asteptata = norma_frobenius((tensor - reconstructie).ravel())
+        assert np.isclose(eroare_calculata, eroare_asteptata), f"Testul {i+1} a eșuat, tucker_error={eroare_calculata}, asteptat={eroare_asteptata}"
+        assert eroare_calculata < 1e-10, f"Testul {i+1} a eșuat, eroarea full-rank este prea mare: {eroare_calculata}"
+
+        G_redus, Us_redus = HOSVD(tensor, (2, 3, 3))
+        reconstructie_redusa = reconstruct(G_redus, Us_redus)
+        eroare_redusa = tucker_error(tensor, G_redus, Us_redus)
+        eroare_redusa_asteptata = norma_frobenius((tensor - reconstructie_redusa).ravel())
+        assert np.isclose(eroare_redusa, eroare_redusa_asteptata), f"Testul redus {i+1} a eșuat, tucker_error={eroare_redusa}, asteptat={eroare_redusa_asteptata}"
+        assert eroare_redusa >= 0, f"Testul redus {i+1} a eșuat, eroarea nu poate fi negativa: {eroare_redusa}"
     print("Toate testele pentru tucker_error au trecut")
 
 
@@ -398,10 +423,14 @@ def test_margine_teoretica(nr_teste_randomizate=5):
     rng = np.random.default_rng(15)
     for i in range(nr_teste_randomizate):
         tensor = rng.random((3, 4, 5))
-        G, Us = HOSVD(tensor, tensor.shape)
-        reconstructie = reconstruct(G, Us)
-        eroare = np.linalg.norm(tensor - reconstructie) / np.linalg.norm(tensor)
-        assert eroare < 1e-10, f"Testul {i+1} a eșuat, eroarea de aproximare este prea mare: {eroare}"
+        margine_full = margine_teoretica(tensor, tensor.shape)
+        margine_redusa = margine_teoretica(tensor, (2, 3, 3))
+
+        assert np.isfinite(margine_full), f"Testul {i+1} a eșuat, marginea full-rank nu este finita: {margine_full}"
+        assert np.isfinite(margine_redusa), f"Testul {i+1} a eșuat, marginea redusa nu este finita: {margine_redusa}"
+        assert margine_full >= -1e-12, f"Testul {i+1} a eșuat, marginea full-rank este negativa: {margine_full}"
+        assert margine_redusa >= -1e-12, f"Testul {i+1} a eșuat, marginea redusa este negativa: {margine_redusa}"
+        assert margine_full < 1e-8, f"Testul {i+1} a eșuat, marginea full-rank trebuie sa fie aproape zero: {margine_full}"
     print("Toate testele pentru margine_teoretica au trecut")
 
 

@@ -1,3 +1,8 @@
+#va urasc din tot sufletul meu nu mai suport am stat 5 ore sa fac un 
+#amarat de svd sa mearga pentru descompunerea tucker si acum imi da eroare 
+#la testul 5 pentru marginea teoretica ,nu stiu de ce mai stau o ora sa mi dau seama 
+#(mi am dat seama)
+
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -122,55 +127,123 @@ def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
 
 
 def SVD(A, TOL=1e-14):
-    ATA = A.T @ A
-    n = np.shape(ATA)[0]
-    Q, T = Tridiag_Householder(ATA)
-    T_final, V = QR_iteration(ATA, Q, TOL)
-    lambdas=np.diag(T_final) #valorile proprii sunt pe diagonala, V=vectorii proprii ai lui ATA
-    sigmas=np.sqrt(np.maximum(lambdas,0)) #pentru a evita erori de tip NaN folosim np.maximum care forteaza valorile mici (ex:-1.2e-16) sa devina zero
-    idx = np.argsort(sigmas)[::-1] #ordonam valorile proprii in ordine descrescatoare , ::-1 inverseaza ordinea si obtinem indicii pt sortarea descrescatoare
-    sigmas = sigmas[idx]  #sortam vectorii proprii in aceeasi ordine descrescatoare
-    V = V[:, idx] 
-    S=np.diag(sigmas) #matricea sigma
     m, n=A.shape
-    U = np.zeros((m, m)) 
-    # prag relativ pentru valori singulare numeric stabile
-    prag_sigma = TOL * max(A.shape) * sigmas[0] if len(sigmas) > 0 else TOL
-    r = 0 # contor pt vectorii deja adaugati in U
-    for i in range(min(n, m)):
-        if sigmas[i] > prag_sigma:
-            # re-ortonormalizam coloanele calculate din A @ V
-            u = (A @ V[:, i]) / sigmas[i]
-            for j in range(r):
-                u = u - np.dot(U[:, j], u) * U[:, j]
-            norm_u = norma_frobenius(u)
-            if norm_u > TOL:
-                U[:, r] = u / norm_u
-                r += 1
-    # completam U la o baza ortonormala
-    I=np.eye(m)
-    curent_col = r
-    for k in range(m):
-        if curent_col >= m:
-            break 
-        v_posibil= I[:, k].copy()
-        for i in range(curent_col):
-            R_ik = np.dot(U[:, i], v_posibil)
-            v_posibil = v_posibil - R_ik * U[:, i] 
-        norm_v = norma_frobenius(v_posibil)
-        if norm_v > TOL:
-            U[:, curent_col] = v_posibil / norm_v
-            curent_col += 1
+
+    def completeaza_baza_ortonormala(B, dimensiune, start_col):
+        I=np.eye(dimensiune)
+        curent_col = start_col
+        for k in range(dimensiune):
+            if curent_col >= dimensiune:
+                break
+            v_posibil= I[:, k].copy()
+            for i in range(curent_col):
+                R_ik = np.dot(B[:, i], v_posibil)
+                v_posibil = v_posibil - R_ik * B[:, i]
+            norm_v = norma_frobenius(v_posibil)
+            if norm_v > TOL:
+                B[:, curent_col] = v_posibil / norm_v
+                curent_col += 1
+        return B
+
+    if n <= m:
+        ATA = A.T @ A
+        Q, T = Tridiag_Householder(ATA)
+        T_final, V = QR_iteration(ATA, Q, TOL)
+        lambdas=np.diag(T_final) #valorile proprii sunt pe diagonala, V=vectorii proprii ai lui ATA
+        sigmas=np.sqrt(np.maximum(lambdas,0)) #pentru a evita erori de tip NaN folosim np.maximum care forteaza valorile mici (ex:-1.2e-16) sa devina zero
+        idx = np.argsort(sigmas)[::-1] #ordonam valorile proprii in ordine descrescatoare
+        sigmas = sigmas[idx]
+        V = V[:, idx]
+
+        U = np.zeros((m, m))
+        prag_sigma = TOL * max(A.shape) * sigmas[0] if len(sigmas) > 0 else TOL
+        r = 0
+        for i in range(min(n, m)):
+            if sigmas[i] > prag_sigma:
+                u = (A @ V[:, i]) / sigmas[i]
+                for j in range(r):
+                    u = u - np.dot(U[:, j], u) * U[:, j]
+                norm_u = norma_frobenius(u)
+                if norm_u > TOL:
+                    U[:, r] = u / norm_u
+                    r += 1
+        U = completeaza_baza_ortonormala(U, m, r)
+    else:
+        AAT = A @ A.T
+        Q, T = Tridiag_Householder(AAT)
+        T_final, U = QR_iteration(AAT, Q, TOL)
+        lambdas=np.diag(T_final) #valorile proprii sunt pe diagonala, U=vectorii proprii ai lui AAT
+        sigmas=np.sqrt(np.maximum(lambdas,0))
+        idx = np.argsort(sigmas)[::-1]
+        sigmas = sigmas[idx]
+        U = U[:, idx]
+
+        V = np.zeros((n, n))
+        prag_sigma = TOL * max(A.shape) * sigmas[0] if len(sigmas) > 0 else TOL
+        r = 0
+        for i in range(min(n, m)):
+            if sigmas[i] > prag_sigma:
+                v = (A.T @ U[:, i]) / sigmas[i]
+                for j in range(r):
+                    v = v - np.dot(V[:, j], v) * V[:, j]
+                norm_v = norma_frobenius(v)
+                if norm_v > TOL:
+                    V[:, r] = v / norm_v
+                    r += 1
+        V = completeaza_baza_ortonormala(V, n, r)
+
     S = np.zeros((m, n))
     np.fill_diagonal(S, sigmas)
     return U, S , V.T
 
 def SVD_redus(A,r,TOL=1e-14):
-    U, S, Vt = SVD(A, TOL)
-    U_r  = U[:, :r]
-    S_r  = S[:r, :r]
-    Vt_r = Vt[:r, :]
-    return U_r, S_r, Vt_r
+    m, n = A.shape
+    rang_maxim = min(m, n)
+    r = min(r, rang_maxim)
+
+    if n <= m:
+        ATA = A.T @ A
+        Q, T = Tridiag_Householder(ATA)
+        T_final, V = QR_iteration(ATA, Q, TOL)
+        lambdas = np.diag(T_final)
+        sigmas = np.sqrt(np.maximum(lambdas, 0))
+        idx = np.argsort(sigmas)[::-1][:r]
+        sigmas_r = sigmas[idx]
+        V_r = V[:, idx]
+
+        U_r = np.zeros((m, r))
+        prag_sigma = TOL * max(A.shape) * sigmas_r[0] if len(sigmas_r) > 0 else TOL
+        for i in range(r):
+            if sigmas_r[i] > prag_sigma:
+                u = (A @ V_r[:, i]) / sigmas_r[i]
+                for j in range(i):
+                    u = u - np.dot(U_r[:, j], u) * U_r[:, j]
+                norm_u = norma_frobenius(u)
+                if norm_u > TOL:
+                    U_r[:, i] = u / norm_u
+    else:
+        AAT = A @ A.T
+        Q, T = Tridiag_Householder(AAT)
+        T_final, U = QR_iteration(AAT, Q, TOL)
+        lambdas = np.diag(T_final)
+        sigmas = np.sqrt(np.maximum(lambdas, 0))
+        idx = np.argsort(sigmas)[::-1][:r]
+        sigmas_r = sigmas[idx]
+        U_r = U[:, idx]
+
+        V_r = np.zeros((n, r))
+        prag_sigma = TOL * max(A.shape) * sigmas_r[0] if len(sigmas_r) > 0 else TOL
+        for i in range(r):
+            if sigmas_r[i] > prag_sigma:
+                v = (A.T @ U_r[:, i]) / sigmas_r[i]
+                for j in range(i):
+                    v = v - np.dot(V_r[:, j], v) * V_r[:, j]
+                norm_v = norma_frobenius(v)
+                if norm_v > TOL:
+                    V_r[:, i] = v / norm_v
+
+    S_r = np.diag(sigmas_r)
+    return U_r, S_r, V_r.T
 
 #functii pentru tensori
 #matricizarea foloseste ca argumente tensorul T si modul in care vrem sa il matricizam (1,2,3)
