@@ -17,7 +17,7 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
     tensor = imgRgb.astype(float) / 255.0
     H, W, C = tensor.shape
 
-    #Organizare imagine pe blocuri de 16x16
+    #Organizare imagine pe blocuri default 16x16
     HNew = (H // blockSize) * blockSize
     WNew = (W // blockSize) * blockSize
 
