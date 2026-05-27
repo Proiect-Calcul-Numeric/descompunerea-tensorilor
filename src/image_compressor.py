@@ -22,7 +22,7 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
     tensor = tensor[:HNew, :WNew, :]
 
     tensorFinal = np.zeros_like(tensor)
-    R_B = max(1, int(blockSize * compressionFactor))
+    R_B = int(blockSize * compressionFactor)
     R_C = 3
 
     blocksH = HNew // blockSize
