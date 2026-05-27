@@ -112,9 +112,16 @@ def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
     while not toate_extra_diag_sub_prag(T, prag) and iteratii < max_iter:
         # shift Wilkinson pentru a evita stagnarea pe blocuri 2x2
         if n >= 2:
-            delta = (T[n - 2, n - 2] - T[n - 1, n - 1]) / 2
-            semn = 1 if delta >= 0 else -1
-            mu = T[n - 1, n - 1] - semn * T[n - 1, n - 2] ** 2 / (abs(delta) + np.sqrt(delta ** 2 + T[n - 1, n - 2] ** 2))
+            if abs(T[n - 1, n - 2]) < 1e-15:
+                mu = T[n - 1, n - 1]
+            else:
+                delta = (T[n - 2, n - 2] - T[n - 1, n - 1]) / 2.0
+                semn = 1.0 if delta >= 0 else -1.0
+                numitor = abs(delta) + np.sqrt(delta ** 2 + T[n - 1, n - 2] ** 2)
+                if numitor < 1e-15:
+                    mu = T[n - 1, n - 1]
+                else:
+                    mu = T[n - 1, n - 1] - semn * T[n - 1, n - 2] ** 2 / numitor
         else:
             mu = T[n - 1, n - 1]
 
