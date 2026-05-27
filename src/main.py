@@ -95,11 +95,11 @@ if uploadedFile is not None:
             st.subheader("Original")
             imgOrig = cv2.imread(tempPath)
             imgOrigRgb = cv2.cvtColor(imgOrig, cv2.COLOR_BGR2RGB)
-            st.image(imgOrigRgb, use_column_width=True)
+            st.image(imgOrigRgb, width=True)
             
         with col2:
             st.subheader("Comprimat")
-            st.image(st.session_state.compressedImage, use_column_width=True)
+            st.image(st.session_state.compressedImage, width=True)
             
         st.write(f"**Raport de compresie stocare (teoretic):** {st.session_state.compRate:.2f}x")
         st.write(f"**Eroare relativă de reconstrucție (Norma Frobenius):** {st.session_state.relativeError:.2f}%")
