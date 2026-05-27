@@ -22,7 +22,7 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
     tensor = tensor[:HNew, :WNew, :]
 
     tensorFinal = np.zeros_like(tensor)
-    R_B = int(blockSize * compressionFactor)
+    R_B = max(1, int(blockSize * compressionFactor))
     R_C = 3
 
     blocksH = HNew // blockSize
@@ -30,6 +30,8 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
 
     blockErrors = []
     normErrors = []
+    G_list = []
+    Us_list = []
 
     totalBlocks = blocksH * blocksW
     completedBlocks = 0
@@ -44,6 +46,8 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
             block = tensor[rStart:rEnd, cStart:cEnd, :]
 
             G, Us = HOSVD(block, [R_B, R_B, R_C])
+            G_list.append(G)
+            Us_list.append(Us)
 
             blockReconstructed = reconstruct(G, Us)
             tensorFinal[rStart:rEnd, cStart:cEnd, :] = blockReconstructed
@@ -69,6 +73,6 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
     originalNorm = np.sqrt(sum(normErrors))
     relativeError = (absoluteError / originalNorm) * 100
     
-    return imgCompressed, compressionRate, relativeError, absoluteError
+    return imgCompressed, compressionRate, relativeError, absoluteError, G_list, Us_list
 
 
