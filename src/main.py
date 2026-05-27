@@ -7,15 +7,15 @@ import io
 from image_compressor import compress_image
 
 st.set_page_config(
-    page_title="Image Compressor",
+    page_title="Comprimare de Imagini",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("Sistem de Compresie Tensorială (Tucker Decomposition & HOSVD)")
+st.title("Compresarea imaginilor folosind HOSVD si Tucker Decomposition")
 
 compressionFactor = st.sidebar.slider(
-    "Factor de compresie spectrală (Calitate)",
+    "Factor de compresie",
     min_value=0.05,
     max_value=1.0,
     value=0.5,
@@ -23,22 +23,16 @@ compressionFactor = st.sidebar.slider(
 )
 
 blockSize = st.sidebar.selectbox(
-    "Dimensiune bloc spațial (Pixeli)",
-    options=[8, 16, 32],
+    "Dimensiune bloc (Pixeli)",
+    options=[4,8, 16, 32, 64],
     index=1,
-    help="Imaginea este împărțită în blocuri de BxB pixeli. Dimensiunea 16x16 este optimă."
 )
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-**Cum funcționează?**
-Aplicația împarte imaginea în blocuri pătrate, aplică descompunerea HOSVD custom pe fiecare bloc și trunchiază valorile singulare mai puțin importante, reducând drastic spațiul ocupat.
-""")
+
 
 uploadedFile = st.file_uploader(
-    "Selectați imaginea sursă pentru analiză spectrală",
+    "Selectați imaginea pentru compresie",
     type=["jpg", "jpeg", "png"],
-    help="Suportă fișiere JPG, JPEG și PNG."
 )
 
 if "compressedImage" not in st.session_state:
@@ -60,7 +54,7 @@ if uploadedFile is not None:
     with open(tempPath, "wb") as f:
         f.write(uploadedFile.getbuffer())
         
-    if st.button("Execută compresia tensorială"):
+    if st.button("Execută compresia"):
         try:
             with st.spinner("Se comprimă imaginea.."):
                 startTime = time.time()
@@ -85,7 +79,7 @@ if uploadedFile is not None:
                 st.session_state.gList = gList
                 st.session_state.usList = usList
         except Exception as e:
-            st.error(f"Eroare întâmpinată în timpul procesării tensorului: {e}")
+            st.error(f"Eroare întâmpinată în timpul compresării: {e}")
 
     if st.session_state.compressedImage is not None:
         col1, col2 = st.columns(2)
@@ -100,9 +94,8 @@ if uploadedFile is not None:
             
         st.write(f"**Raport de compresie stocare (teoretic):** {st.session_state.compRate:.2f}x")
         st.write(f"**Eroare relativă de reconstrucție (Norma Frobenius):** {st.session_state.relativeError:.2f}%")
-        st.write(f"**Timp de execuție algoritm tensorial:** {st.session_state.execTime:.3f} s")
+        st.write(f"**Timp de execuție:** {st.session_state.execTime:.3f} s")
         
-        # Stivuim matricile ca blocuri contigue pentru a elimina complet overhead-ul de serializare 'object' (care genera 686 KB)
         gArray = np.stack([G.astype(np.float16) for G in st.session_state.gList])
         u1Array = np.stack([Us[0].astype(np.float16) for Us in st.session_state.usList])
         u2Array = np.stack([Us[1].astype(np.float16) for Us in st.session_state.usList])
@@ -121,33 +114,28 @@ if uploadedFile is not None:
         originalSizeKb = os.path.getsize(tempPath) / 1024.0
         compressedSizeKb = len(npzBytes) / 1024.0
         
-        st.markdown("### 💾 Comparație Dimensiune Fișier Fizic pe Disc")
-        st.write(f"**Dimensiune imagine originală:** {originalSizeKb:.2f} KB")
-        st.write(f"**Dimensiune date descompuse (.NPZ comprimat):** {compressedSizeKb:.2f} KB")
         
-        realReduction = (1.0 - (compressedSizeKb / originalSizeKb)) * 100.0
-        if realReduction > 0:
-            st.success(f"Compresie fizică realizată cu succes! Datele ocupă cu {realReduction:.1f}% mai puțin spațiu pe disc.")
+        st.write(f"**Dimensiune imagine originală:** {originalSizeKb:.2f} KB")
+        
+        
+        
             
-        st.markdown("### 📥 Opțiuni Descărcare")
+        st.markdown("**Opțiuni Descărcare:**")
         
         imgCompressedBgr = cv2.cvtColor(st.session_state.compressedImage, cv2.COLOR_RGB2BGR)
         isSuccess, jpegBuffer = cv2.imencode(".jpg", imgCompressedBgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
         
         if isSuccess:
             st.download_button(
-                label="Descărcare imagine reconstituită (Format JPG - Calitate 90%)",
+                label="Descărcare imagine reconstituită (Format JPG)",
                 data=jpegBuffer.tobytes(),
                 file_name="reconstructie_tucker.jpg",
                 mime="image/jpeg"
             )
             
         st.download_button(
-            label="Descărcare date Tucker comprimate (Format binar .NPZ)",
+            label="Descărcare date Tucker comprimate (Format NPZ)",
             data=npzBytes,
             file_name="date_tucker_comprimate.npz",
             mime="application/octet-stream"
         )
-            
-else:
-    st.info("Pornire rapidă: Încarcă o imagine din panoul de mai sus pentru a începe compresia.")

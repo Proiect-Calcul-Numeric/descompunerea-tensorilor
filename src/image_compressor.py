@@ -13,21 +13,26 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
     else:
         imgRgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    #Normalizam tensorul
     tensor = imgRgb.astype(float) / 255.0
     H, W, C = tensor.shape
 
     #Organizare imagine pe blocuri de 16x16
     HNew = (H // blockSize) * blockSize
     WNew = (W // blockSize) * blockSize
-    tensor = tensor[:HNew, :WNew, :]
-
-    tensorFinal = np.zeros_like(tensor)
-    R_B = max(1, int(blockSize * compressionFactor))
-    R_C = 3
 
     blocksH = HNew // blockSize
     blocksW = WNew // blockSize
 
+    tensor = tensor[:HNew, :WNew, :]
+
+    #Initializare tensor final si ranguri
+    tensorFinal = np.zeros_like(tensor)
+    R_b = max(1, int(blockSize * compressionFactor))
+    R_c = 3
+
+
+    #Initializare liste pentru erori si vectori
     blockErrors = []
     normErrors = []
     G_list = []
@@ -38,19 +43,19 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallba
 
     for i in range(blocksH):
         for j in range(blocksW):
-            rStart = i * blockSize
-            rEnd = rStart + blockSize
-            cStart = j* blockSize
-            cEnd = cStart + blockSize
+            rowStart = i * blockSize
+            rowEnd = rowStart + blockSize
+            colStart = j* blockSize
+            colEnd = colStart + blockSize
 
-            block = tensor[rStart:rEnd, cStart:cEnd, :]
+            block = tensor[rowStart:rowEnd, colStart:colEnd, :]
 
-            G, Us = HOSVD(block, [R_B, R_B, R_C])
+            G, Us = HOSVD(block, [R_b, R_b, R_c])
             G_list.append(G)
             Us_list.append(Us)
 
             blockReconstructed = reconstruct(G, Us)
-            tensorFinal[rStart:rEnd, cStart:cEnd, :] = blockReconstructed
+            tensorFinal[rowStart:rowEnd, colStart:colEnd, :] = blockReconstructed
 
             absoluteError = tucker_error(block, G, Us)
             originalNorm = norma_frobenius(block)
