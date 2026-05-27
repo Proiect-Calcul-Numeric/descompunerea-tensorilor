@@ -105,11 +105,19 @@ if uploadedFile is not None:
         st.write(f"**Eroare relativă de reconstrucție (Norma Frobenius):** {st.session_state.relativeError:.2f}%")
         st.write(f"**Timp de execuție algoritm tensorial:** {st.session_state.execTime:.3f} s")
         
+        # Stivuim matricile ca blocuri contigue pentru a elimina complet overhead-ul de serializare 'object' (care genera 686 KB)
+        gArray = np.stack([G.astype(np.float16) for G in st.session_state.gList])
+        u1Array = np.stack([Us[0].astype(np.float16) for Us in st.session_state.usList])
+        u2Array = np.stack([Us[1].astype(np.float16) for Us in st.session_state.usList])
+        u3Array = np.stack([Us[2].astype(np.float16) for Us in st.session_state.usList])
+
         npzBuffer = io.BytesIO()
         np.savez_compressed(
             npzBuffer,
-            G=np.array(st.session_state.gList, dtype=object),
-            Us=np.array(st.session_state.usList, dtype=object)
+            G=gArray,
+            U1=u1Array,
+            U2=u2Array,
+            U3=u3Array
         )
         npzBytes = npzBuffer.getvalue()
         
