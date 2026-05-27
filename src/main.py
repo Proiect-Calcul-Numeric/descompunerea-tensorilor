@@ -25,7 +25,7 @@ compressionFactor = st.sidebar.slider(
 blockSize = st.sidebar.selectbox(
     "Dimensiune bloc (Pixeli)",
     options=[4,8, 16, 32, 64],
-    index=1,
+    index=2,
 )
 
 
