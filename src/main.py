@@ -51,15 +51,14 @@ if "compressedImage" not in st.session_state:
 
 if uploadedFile is not None:
     tempPath = "temp_input.png"
-    fileBytes = uploadedFile.getvalue()
-    fileHash = hash(fileBytes)
+    fileIdentifier = f"{uploadedFile.name}_{uploadedFile.size}"
     
-    if "fileHash" not in st.session_state or st.session_state.fileHash != fileHash:
-        st.session_state.fileHash = fileHash
+    if "fileIdentifier" not in st.session_state or st.session_state.fileIdentifier != fileIdentifier:
+        st.session_state.fileIdentifier = fileIdentifier
         st.session_state.compressedImage = None
         
     with open(tempPath, "wb") as f:
-        f.write(fileBytes)
+        f.write(uploadedFile.getbuffer())
         
     if st.button("Execută compresia tensorială"):
         try:
@@ -93,9 +92,7 @@ if uploadedFile is not None:
         
         with col1:
             st.subheader("Original")
-            imgOrig = cv2.imread(tempPath)
-            imgOrigRgb = cv2.cvtColor(imgOrig, cv2.COLOR_BGR2RGB)
-            st.image(imgOrigRgb, use_column_width=True)
+            st.image(uploadedFile, use_column_width=True)
             
         with col2:
             st.subheader("Comprimat")
