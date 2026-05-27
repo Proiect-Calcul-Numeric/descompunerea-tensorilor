@@ -2,7 +2,7 @@ import cv2
 import numpy as np 
 from matematica import HOSVD, reconstruct, norma_frobenius, tucker_error
 
-def compress_image(path, compressionFactor = 0.5, blockSize = 16):
+def compress_image(path, compressionFactor = 0.5, blockSize = 16, progressCallback = None):
     #Citire imagine
     img = cv2.imread(path)
     if img is None:
@@ -31,6 +31,9 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16):
     blockErrors = []
     normErrors = []
 
+    totalBlocks = blocksH * blocksW
+    completedBlocks = 0
+
     for i in range(blocksH):
         for j in range(blocksW):
             rStart = i * blockSize
@@ -50,6 +53,10 @@ def compress_image(path, compressionFactor = 0.5, blockSize = 16):
 
             blockErrors.append(absoluteError ** 2)
             normErrors.append(originalNorm ** 2)
+
+            completedBlocks += 1
+            if progressCallback is not None:
+                progressCallback(completedBlocks / totalBlocks)
 
     imgCompressed = np.clip(tensorFinal * 255.0, 0, 255).astype(np.uint8)
     
