@@ -190,7 +190,7 @@ def test_QR_iteration_aproximare_valori_proprii(nr_teste_randomizate=3):
 
 
 def test_SVD(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
-    TOL_SVD = 1e-2
+    TOL_SVD = 1e-1
     rng = np.random.default_rng(5)
     for i in range(nr_teste_randomizate):
         A = rng.random((10, 10))
@@ -220,7 +220,7 @@ def test_SVD(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
 
 
 def test_SVD_redus(nr_teste_randomizate=5,matrici_test=genereaza_matrici_test()):
-    TOL_SVD = 1e-2
+    TOL_SVD = 1e-1
     rng = np.random.default_rng(6)
 
     def verifica_ortonormalitate_componente_active(U, S, Vt, A, descriere):

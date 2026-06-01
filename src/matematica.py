@@ -133,7 +133,7 @@ def QR_iteration(A, Q, TOL=1e-4, max_iter=1000):
     return T, V #T este matricea tridiagonalizata care contine valorile proprii pe diagonala, iar V contine vectorii proprii ai lui A
 
 
-def SVD(A, TOL=1e-14):
+def SVD(A, TOL=1e-3):
     m, n=A.shape
 
     def completeaza_baza_ortonormala(B, dimensiune, start_col):
@@ -203,7 +203,7 @@ def SVD(A, TOL=1e-14):
     np.fill_diagonal(S, sigmas)
     return U, S , V.T
 
-def SVD_redus(A,r,TOL=1e-5):
+def SVD_redus(A,r,TOL=1e-3):
     m, n = A.shape
     rang_maxim = min(m, n)
     r = min(r, rang_maxim)
