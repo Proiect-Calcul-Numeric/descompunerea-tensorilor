@@ -4,3 +4,16 @@ __pycache__/
 .env
 data/
 .antigravitycli
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Keep generated comparison plots in comparison_results/
+docs/figures/
+docs/raport_SVD.pdf

@@ -1,510 +1,417 @@
 \documentclass[12pt,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[romanian]{babel}
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage{hyperref}
-\usepackage{geometry}
 \usepackage{booktabs}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
 
-\geometry{margin=2.5cm}
+\geometry{margin=2.4cm}
+\graphicspath{{docs/figures/}{figures/}{comparison_results/}{../comparison_results/}}
 
 \theoremstyle{definition}
 \newtheorem{definitie}{Definiție}[section]
 \newtheorem{teorema}{Teoremă}[section]
-\newtheorem{lema}{Lemă}[section]
-\newtheorem{proprietate}{Proprietate}[section]
 \newtheorem{observatie}{Observație}[section]
 
-\lstset{
-  language=Python,
-  basicstyle=\ttfamily\small,
-  keywordstyle=\color{blue},
-  commentstyle=\color{gray},
-  stringstyle=\color{orange},
-  showstringspaces=false,
-  frame=single,
-  breaklines=true
-}
-
-\title{
-  \textbf{Descompunerea Tucker a Tensorilor} \\
-  \large Documentație matematică
-}
+\title{\textbf{Descompunerea valorilor singulare și compresia imaginilor prin Tucker/HOSVD}}
 \author{Proiect Calcul Numeric}
-\date{\today}
+\date{Iunie 2026}
 
 \begin{document}
 
 \maketitle
+
+\begin{abstract}
+Acest proiect implementează manual descompunerea valorilor singulare (SVD), fără folosirea funcțiilor NumPy predefinite pentru descompuneri, diagonalizări sau factorizări în codul principal. SVD-ul este apoi folosit în algoritmul HOSVD pentru obținerea unei descompuneri Tucker pe blocuri de imagine. Aplicația finală permite compresia imaginilor, reconstrucția lor și evaluarea raportului de compresie, a erorii relative și a timpului de execuție.
+\end{abstract}
+
 \tableofcontents
 \newpage
 
-% ─────────────────────────────────────────────────────────────────
-\section{Descrierea matematică a metodelor}
-% ─────────────────────────────────────────────────────────────────
+\section{Obiectivul proiectului}
 
-\subsection{Descompunerea după valori singulare (SVD)}
+Scopul proiectului este dublu:
+\begin{itemize}
+  \item implementarea integrală a SVD folosind metode numerice construite manual;
+  \item folosirea SVD într-o aplicație practică: compresia imaginilor color prin descompunere Tucker/HOSVD.
+\end{itemize}
 
-\subsubsection{Definiție și existență}
+Codul principal se află în fișierele \texttt{src/matematica.py}, \texttt{src/image\_compressor.py} și \texttt{src/main.py}. Funcțiile NumPy de tip \texttt{np.linalg.svd}, \texttt{np.linalg.eig}, \texttt{np.linalg.eigh} sau \texttt{np.linalg.qr} sunt folosite doar în teste și comparații, nu în implementarea propriu-zisă a metodei.
+
+\section{Descriere matematică}
+
+\subsection{Descompunerea după valori singulare}
 
 \begin{definitie}
-Fie $A \in \mathbb{R}^{m \times n}$. \textbf{Descompunerea după valori singulare} (SVD) a lui $A$ este factorizarea
+Fie $A \in \mathbb{R}^{m \times n}$. O descompunere după valori singulare a matricei $A$ este
 \[
-  A = U \Sigma V^T
+  A = U \Sigma V^T,
 \]
-unde:
-\begin{itemize}
-  \item $U \in \mathbb{R}^{m \times m}$ este ortogonală: $U^T U = U U^T = I_m$
-  \item $V \in \mathbb{R}^{n \times n}$ este ortogonală: $V^T V = V V^T = I_n$
-  \item $\Sigma \in \mathbb{R}^{m \times n}$ este pseudo-diagonală cu intrările
-        $\sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_p \geq 0$,
-        unde $p = \min(m, n)$, numite \textbf{valori singulare} ale lui $A$
-\end{itemize}
+unde $U \in \mathbb{R}^{m \times m}$ și $V \in \mathbb{R}^{n \times n}$ sunt ortogonale, iar $\Sigma \in \mathbb{R}^{m \times n}$ este pseudo-diagonală, cu valori
+\[
+  \sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_p \geq 0,\quad p=\min(m,n).
+\]
+Valorile $\sigma_i$ se numesc valori singulare.
 \end{definitie}
 
 \begin{teorema}[Existența SVD]
-Orice matrice $A \in \mathbb{R}^{m \times n}$ admite o descompunere după valori singulare.
+Orice matrice reală $A \in \mathbb{R}^{m \times n}$ admite o descompunere SVD.
 \end{teorema}
 
 \begin{proof}
-Matricea $A^T A \in \mathbb{R}^{n \times n}$ este simetrică și pozitiv semidefinită, deci prin
-teorema spectrală admite o diagonalizare ortogonală:
+Matricea $A^T A$ este simetrică și pozitiv semidefinită, deci admite o diagonalizare ortogonală:
 \[
-  A^T A = V \Lambda V^T
+  A^T A = V \Lambda V^T,
 \]
-unde $V$ este ortogonală și $\Lambda = \mathrm{diag}(\lambda_1, \ldots, \lambda_n)$ cu
-$\lambda_i \geq 0$. Definim valorile singulare $\sigma_i = \sqrt{\lambda_i}$.
-
-Pentru $\sigma_i > 0$, definim vectorii singulari stângi:
+unde $\Lambda=\mathrm{diag}(\lambda_1,\ldots,\lambda_n)$ și $\lambda_i \geq 0$. Definim
 \[
-  u_i = \frac{A v_i}{\sigma_i}, \quad i = 1, \ldots, r
+  \sigma_i=\sqrt{\lambda_i}.
 \]
-unde $r = \mathrm{rang}(A)$. Aceștia sunt ortonormați:
+Pentru $\sigma_i>0$, vectorii singulari stângi sunt
 \[
-  \langle u_i, u_j \rangle = \frac{v_i^T A^T A v_j}{\sigma_i \sigma_j}
-  = \frac{\sigma_j^2 \langle v_i, v_j \rangle}{\sigma_i \sigma_j} = \delta_{ij}
+  u_i=\frac{A v_i}{\sigma_i}.
 \]
-Completăm $\{u_1, \ldots, u_r\}$ la o bază ortonormată a lui $\mathbb{R}^m$ prin procesul
-Gram-Schmidt. Matricea $U = [u_1 \mid \cdots \mid u_m]$ este ortogonală și se verifică
-$A = U \Sigma V^T$.
+Aceștia sunt ortonormați deoarece
+\[
+  \langle u_i,u_j\rangle=
+  \frac{v_i^T A^T A v_j}{\sigma_i\sigma_j}
+  =
+  \frac{\lambda_j \langle v_i,v_j\rangle}{\sigma_i\sigma_j}
+  =
+  \delta_{ij}.
+\]
+Vectorii lipsă se completează la o bază ortonormată, obținându-se matricea $U$. Rezultă factorizarea $A=U\Sigma V^T$.
 \end{proof}
 
-\subsubsection{SVD redus}
+\subsection{Aproximarea de rang redus}
 
-\begin{definitie}
-\textbf{SVD-ul redus} (thin SVD) de rang $r$ al matricei $A$ este
+SVD-ul redus păstrează doar primele $r$ valori singulare:
 \[
-  A \approx U_r \Sigma_r V_r^T
+  A_r = U_r \Sigma_r V_r^T.
 \]
-unde $U_r \in \mathbb{R}^{m \times r}$, $\Sigma_r \in \mathbb{R}^{r \times r}$,
-$V_r \in \mathbb{R}^{n \times r}$ conțin doar primele $r$ coloane/valori singulare.
-\end{definitie}
 
-\subsubsection{Proprietatea de aproximare optimă}
-
-\begin{teorema}[Eckart–Young–Mirsky]
-Fie $A \in \mathbb{R}^{m \times n}$ cu $\mathrm{rang}(A) = \rho$ și SVD-ul
-$A = U \Sigma V^T$. Atunci, pentru orice $r \leq \rho$,
+\begin{teorema}[Eckart--Young--Mirsky]
+Dintre toate matricele de rang cel mult $r$, matricea $A_r$ obținută prin trunchierea SVD minimizează eroarea în norma Frobenius:
 \[
-  \min_{\mathrm{rang}(B) \leq r} \|A - B\|_F = \|A - A_r\|_F
-  = \sqrt{\sigma_{r+1}^2 + \sigma_{r+2}^2 + \cdots + \sigma_\rho^2}
+  \min_{\mathrm{rang}(B)\le r}\|A-B\|_F
+  =
+  \|A-A_r\|_F
+  =
+  \sqrt{\sum_{i=r+1}^{\rho}\sigma_i^2},
 \]
-unde $A_r = U_r \Sigma_r V_r^T$ este trunchierea SVD la rang $r$.
+unde $\rho=\mathrm{rang}(A)$.
 \end{teorema}
 
-Această teoremă justifică de ce trunchierea SVD este metoda optimă de aproximare
-de rang scăzut: nu există altă matrice de rang $\leq r$ mai apropiată de $A$
-în norma Frobenius.
+Această proprietate justifică folosirea SVD pentru compresie: valorile singulare mici contribuie mai puțin la reconstrucție și pot fi eliminate cu pierdere controlată.
 
-% ─────────────────────────────────────────────────────────────────
-\subsection{Noțiuni tensoriale}
-% ─────────────────────────────────────────────────────────────────
+\subsection{Tensori, matricizare și produs mod-$n$}
 
-\begin{definitie}
-Un \textbf{tensor de ordinul $N$} este un element $\mathcal{A} \in \mathbb{R}^{I_1 \times I_2 \times \cdots \times I_N}$.
-Elementele sale sunt indexate $a_{i_1 i_2 \cdots i_N}$.
-\end{definitie}
-
-\begin{observatie}
-Scalarii, vectorii și matricele sunt cazuri particulare: tensori de ordinul 0, 1, respectiv 2.
-O imagine color de dimensiuni $H \times W$ este un tensor de ordinul 3 cu shape $H \times W \times 3$,
-unde a treia dimensiune corespunde canalelor RGB.
-\end{observatie}
-
-\subsubsection{Matricizarea (unfolding)}
-
-\begin{definitie}
-\textbf{Matricizarea pe modul $n$} a tensorului $\mathcal{A} \in \mathbb{R}^{I_1 \times \cdots \times I_N}$
-este matricea $A_{(n)} \in \mathbb{R}^{I_n \times (I_1 \cdots I_{n-1} I_{n+1} \cdots I_N)}$
-obținută plasând modul $n$ pe linii și aplatizând toate celelalte moduri pe coloane.
-
-Formal, elementul $(i_1, \ldots, i_N)$ din $\mathcal{A}$ mapează la poziția
-$(i_n, j)$ din $A_{(n)}$, unde
+O imagine color de dimensiune $H \times W$ poate fi privită ca tensor
 \[
-  j = 1 + \sum_{\substack{k=1 \\ k \neq n}}^{N}
-      (i_k - 1) \prod_{\substack{m=1 \\ m \neq n}}^{k-1} I_m
+  \mathcal{A} \in \mathbb{R}^{H \times W \times 3},
 \]
-\end{definitie}
+unde ultimul mod reprezintă canalele RGB.
 
-\textbf{Exemplu numeric.} Fie $\mathcal{A} \in \mathbb{R}^{3 \times 4 \times 2}$ cu
-$\mathcal{A}[:,:,1] = \begin{pmatrix}1&2&3&4\\5&6&7&8\\9&10&11&12\end{pmatrix}$ și
-$\mathcal{A}[:,:,2] = \begin{pmatrix}13&14&15&16\\17&18&19&20\\21&22&23&24\end{pmatrix}$.
-
-Matricizările sunt:
+Matricizarea pe modul $n$ transformă un tensor într-o matrice:
 \[
-A_{(1)} = \begin{pmatrix}
-1&2&3&4&13&14&15&16\\
-5&6&7&8&17&18&19&20\\
-9&10&11&12&21&22&23&24
-\end{pmatrix} \in \mathbb{R}^{3 \times 8}
+  A_{(n)} \in \mathbb{R}^{I_n \times \prod_{k\neq n} I_k}.
 \]
+În implementare, aceasta se face prin permutarea axelor și apoi \texttt{reshape}.
 
+Produsul mod-$n$ cu o matrice $M \in \mathbb{R}^{J \times I_n}$ este definit prin relația
 \[
-A_{(2)} = \begin{pmatrix}
-1&5&9&13&17&21\\
-2&6&10&14&18&22\\
-3&7&11&15&19&23\\
-4&8&12&16&20&24
-\end{pmatrix} \in \mathbb{R}^{4 \times 6}
+  \left(\mathcal{A}\times_n M\right)_{(n)} = M A_{(n)}.
 \]
+Această proprietate permite calculul operațiilor tensoriale folosind înmulțiri matriceale obișnuite.
 
-\[
-A_{(3)} = \begin{pmatrix}
-1&2&3&4&5&6&7&8&9&10&11&12\\
-13&14&15&16&17&18&19&20&21&22&23&24
-\end{pmatrix} \in \mathbb{R}^{2 \times 12}
-\]
-
-\subsubsection{Produsul mod-$n$}
-
-\begin{definitie}
-\textbf{Produsul mod-$n$} al tensorului $\mathcal{A} \in \mathbb{R}^{I_1 \times \cdots \times I_N}$
-cu matricea $M \in \mathbb{R}^{J \times I_n}$ este tensorul
-$\mathcal{B} = \mathcal{A} \times_n M \in \mathbb{R}^{I_1 \times \cdots \times I_{n-1} \times J \times I_{n+1} \times \cdots \times I_N}$
-definit prin
-\[
-  b_{i_1 \cdots i_{n-1}\, j\, i_{n+1} \cdots i_N}
-  = \sum_{i_n=1}^{I_n} a_{i_1 \cdots i_N} \cdot m_{j, i_n}
-\]
-\end{definitie}
-
-\begin{proprietate}[Relația cu matricizarea]
-\label{prop:mode-n-mat}
-\[
-  \left(\mathcal{A} \times_n M\right)_{(n)} = M \cdot A_{(n)}
-\]
-\end{proprietate}
-
-Această proprietate este fundamentală pentru implementare: reduce produsul mod-$n$
-la o înmulțire matriceală obișnuită aplicată pe matricizarea tensorului.
-
-\begin{proprietate}[Comutativitate pe moduri diferite]
-Pentru $m \neq n$:
-\[
-  (\mathcal{A} \times_m M) \times_n N = (\mathcal{A} \times_n N) \times_m M
-\]
-\end{proprietate}
-
-% ─────────────────────────────────────────────────────────────────
 \subsection{Descompunerea Tucker și HOSVD}
-% ─────────────────────────────────────────────────────────────────
 
-\subsubsection{Definiția Tucker}
-
-\begin{definitie}
-\textbf{Descompunerea Tucker} de multi-rang $(R_1, R_2, R_3)$ a tensorului
-$\mathcal{A} \in \mathbb{R}^{I_1 \times I_2 \times I_3}$ este factorizarea
+Descompunerea Tucker aproximează tensorul $\mathcal{A}$ prin
 \[
-  \mathcal{A} = \mathcal{G} \times_1 U^{(1)} \times_2 U^{(2)} \times_3 U^{(3)}
+  \mathcal{A} \approx
+  \mathcal{G}
+  \times_1 U^{(1)}
+  \times_2 U^{(2)}
+  \times_3 U^{(3)},
 \]
-unde:
-\begin{itemize}
-  \item $\mathcal{G} \in \mathbb{R}^{R_1 \times R_2 \times R_3}$ este \textbf{tensorul de bază} (core tensor)
-  \item $U^{(n)} \in \mathbb{R}^{I_n \times R_n}$ sunt \textbf{matricele factoriale},
-        cu coloane ortonormate: $(U^{(n)})^T U^{(n)} = I_{R_n}$
-\end{itemize}
-\end{definitie}
+unde $\mathcal{G}$ este tensorul de bază, iar $U^{(n)}$ sunt matrici cu coloane ortonormate.
 
-Alegând $R_n < I_n$ pentru cel puțin un mod, obținem o \textbf{aproximare comprimată}
-a tensorului original.
-
-\subsubsection{Algoritmul HOSVD}
-
-Higher-Order SVD (HOSVD), introdus de De Lathauwer et al. \cite{delathauwer2000},
-calculează o descompunere Tucker prin SVD-uri independente pe fiecare matricizare.
-
-\begin{algorithm}
+HOSVD calculează aceste matrici aplicând SVD pe fiecare matricizare:
+\begin{algorithm}[H]
 \caption{HOSVD}
 \begin{algorithmic}[1]
-\Require Tensor $\mathcal{A} \in \mathbb{R}^{I_1 \times I_2 \times I_3}$,
-         ranguri $(R_1, R_2, R_3)$ cu $R_n \leq I_n$
-\Ensure Core tensor $\mathcal{G}$, matrice factoriale $U^{(1)}, U^{(2)}, U^{(3)}$
-\For{$n = 1, 2, 3$}
-  \State Calculează $A_{(n)} \leftarrow \mathrm{matricize}(\mathcal{A}, n)$
-  \State Calculează SVD: $A_{(n)} = U^{(n)} \Sigma^{(n)} V^{(n)T}$
-  \State $\hat{U}^{(n)} \leftarrow$ primele $R_n$ coloane din $U^{(n)}$
+\Require Tensor $\mathcal{A}$ și ranguri $(R_1,R_2,R_3)$
+\For{$n=1,2,3$}
+  \State $A_{(n)} \leftarrow \mathrm{matricize}(\mathcal{A}, n)$
+  \State $A_{(n)} \approx U_r^{(n)}\Sigma_r^{(n)}V_r^{(n)T}$ prin SVD redus
+  \State Se păstrează primele $R_n$ coloane din $U^{(n)}$
 \EndFor
-\State $\mathcal{G} \leftarrow \mathcal{A} \times_1 (\hat{U}^{(1)})^T \times_2 (\hat{U}^{(2)})^T \times_3 (\hat{U}^{(3)})^T$
-\Return $\mathcal{G},\; \hat{U}^{(1)},\; \hat{U}^{(2)},\; \hat{U}^{(3)}$
+\State $\mathcal{G} \leftarrow \mathcal{A}\times_1 U^{(1)T}\times_2 U^{(2)T}\times_3 U^{(3)T}$
+\Return $\mathcal{G}, U^{(1)}, U^{(2)}, U^{(3)}$
 \end{algorithmic}
 \end{algorithm}
 
-\textbf{Reconstrucția} tensorului aproximat se face prin:
+Reconstrucția se face invers:
 \[
-  \tilde{\mathcal{A}} = \mathcal{G} \times_1 \hat{U}^{(1)} \times_2 \hat{U}^{(2)} \times_3 \hat{U}^{(3)}
+  \tilde{\mathcal{A}} =
+  \mathcal{G}
+  \times_1 U^{(1)}
+  \times_2 U^{(2)}
+  \times_3 U^{(3)}.
 \]
 
-\subsubsection{Eroarea de aproximare}
-
-\begin{teorema}[Marginea erorii HOSVD, \cite{kolda2009tensor}]
-Fie $\tilde{\mathcal{A}}$ aproximarea Tucker de multi-rang $(R_1, R_2, R_3)$
-obținută prin HOSVD. Atunci:
-\[
-  \|\mathcal{A} - \tilde{\mathcal{A}}\|_F \leq
-  \sqrt{\sum_{n=1}^{3} \sum_{i_n = R_n + 1}^{I_n} \left(\sigma_{i_n}^{(n)}\right)^2}
-\]
-unde $\sigma_{i_n}^{(n)}$ sunt valorile singulare ale matricizării $A_{(n)}$.
-\end{teorema}
-
-\begin{proof}[Schiță de demonstrație]
-Notăm cu $P_n = \hat{U}^{(n)}(\hat{U}^{(n)})^T$ proiectorul ortogonal pe subspațiul
-generat de primele $R_n$ coloane din $U^{(n)}$.
-
-Eroarea de proiecție pe modul $n$ singur este:
-\[
-  \|\mathcal{A} - \mathcal{A} \times_n P_n\|_F^2
-  = \sum_{i_n = R_n+1}^{I_n} (\sigma_{i_n}^{(n)})^2
-\]
-prin teorema Eckart–Young aplicată pe matricizarea $A_{(n)}$.
-
-Aplicând inegalitatea triunghiului pentru proiecții succesive
-și folosind proprietatea de comutativitate a produselor mod-$n$
-pe moduri diferite, obținem marginea sumei.
-\end{proof}
-
-\begin{observatie}
-HOSVD \textbf{nu} furnizează aproximarea optimă de multi-rang $(R_1, R_2, R_3)$.
-Inegalitatea din teoremă este în general strictă.
-Aproximarea optimă se obține prin algoritmul HOOI (Higher-Order Orthogonal Iteration),
-care rafinează soluția HOSVD prin iterații alternante, dar nu este implementat în acest proiect.
-\end{observatie}
-
-\subsubsection{Factorul de compresie}
-
-Stocarea tensorului original necesită $\prod_{n=1}^{3} I_n$ numere.
-Stocarea descompunerii Tucker necesită:
-\[
-  \underbrace{R_1 R_2 R_3}_{\mathcal{G}} + \underbrace{I_1 R_1 + I_2 R_2 + I_3 R_3}_{U^{(1)}, U^{(2)}, U^{(3)}}
-  \text{ numere}
-\]
-Factorul de compresie este:
-\[
-  \mathrm{CR} = \frac{I_1 I_2 I_3}{R_1 R_2 R_3 + I_1 R_1 + I_2 R_2 + I_3 R_3}
-\]
-
-% ─────────────────────────────────────────────────────────────────
-\section{Motivarea funcțiilor implementate}
-% ─────────────────────────────────────────────────────────────────
+\section{Implementarea metodei SVD}
 
 \subsection{Funcții auxiliare}
 
-\subsubsection{\texttt{norma\_frobenius}}
-
-\begin{definitie}
-\textbf{Norma Frobenius} a unei matrice $A \in \mathbb{R}^{m \times n}$ este:
+\textbf{\texttt{norma\_frobenius}} calculează
 \[
-  \|A\|_F = \sqrt{\sum_{i=1}^{m} \sum_{j=1}^{n} a_{ij}^2}
+  \|A\|_F=\sqrt{\sum_i\sum_j a_{ij}^2}.
 \]
-\end{definitie}
+Este folosită pentru erori, normalizări și criterii de convergență.
 
-Norma Frobenius este echivalentă cu norma euclidiană a vectorului obținut prin
-aplatizarea matricei. Este aleasă în locul normei spectrale deoarece este calculabilă
-direct fără a recurge la valori proprii, și este extensibilă natural la tensori.
-
-\begin{lstlisting}[caption={Implementarea normei Frobenius}]
-def norma_frobenius(A):
-    return np.sqrt(np.sum(A ** 2))
-\end{lstlisting}
-
-\subsubsection{\texttt{norma\_extra\_diag}}
-
-Folosită ca criteriu de convergență în iterația QR. Măsoară cât de departe este
-o matrice de a fi diagonală — iterația QR converge când elementele în afara diagonalei
-sunt neglijabile:
-\[
-  \|A - \mathrm{diag}(A)\|_F < \varepsilon
-\]
+\textbf{\texttt{norma\_extra\_diag}} calculează norma elementelor din afara diagonalei. Este folosită pentru oprirea iterației QR, când matricea devine suficient de apropiată de o matrice diagonală.
 
 \subsection{Factorizarea QR}
 
-\subsubsection{\texttt{QR\_Gram\_Schmidt}}
+Au fost implementate două variante:
+\begin{itemize}
+  \item \texttt{QR\_Gram\_Schmidt}, utilă pentru explicarea ortogonalizării;
+  \item \texttt{QR\_Householder}, mai stabilă numeric și folosită în iterația QR.
+\end{itemize}
 
-Procesul Gram-Schmidt clasic ortogonalizează coloanele matricei $A$ succesiv.
-La pasul $k$, vectorul curent se proiectează pe toți vectorii deja ortonormați
-și componenta ortogonală devine noua coloană din $Q$:
+Reflectorul Householder folosit are forma
 \[
-  \tilde{q}_k = a_k - \sum_{i=1}^{k-1} \langle q_i, a_k \rangle q_i, \qquad
-  q_k = \frac{\tilde{q}_k}{\|\tilde{q}_k\|}
+  H = I - 2vv^T,
 \]
+unde $v$ este ales astfel încât să anuleze elementele de sub diagonala coloanei curente.
 
-Această funcție este utilizată în interiorul iterației QR pentru calculul valorilor proprii.
-Referință: Golub \& Van Loan \cite{golub2013matrix}, Algoritmul 5.2.1.
+\subsection{Tridiagonalizare și iterație QR}
 
-\subsubsection{\texttt{QR\_Householder}}
+Pentru calculul valorilor proprii ale matricelor simetrice $A^T A$ sau $A A^T$, implementarea folosește:
+\begin{enumerate}
+  \item reducere la formă tridiagonală cu reflectori Householder;
+  \item iterație QR cu shift pentru accelerarea convergenței.
+\end{enumerate}
 
-Factorizarea QR prin reflectori Householder este mai stabilă numeric decât
-Gram-Schmidt clasic. La pasul $k$, se construiește un reflector
-$H_k = I - 2vv^T$ cu
+La fiecare pas QR:
 \[
-  v = x - \alpha e_1, \quad \alpha = -\mathrm{semn}(x_1)\|x\|_2
+  T_k-\mu_k I = Q_k R_k,\qquad
+  T_{k+1}=R_k Q_k+\mu_k I.
 \]
-care anulează elementele sub-diagonale ale coloanei $k$.
+Matricele $T_k$ sunt similare, deci au aceleași valori proprii. Pe măsură ce elementele extra-diagonale tind la zero, diagonala lui $T_k$ aproximează valorile proprii.
 
-Această funcție nu este folosită direct în SVD, dar este implementată ca alternativă
-mai robustă și este comparată cu Gram-Schmidt în testele numerice.
-Referință: Golub \& Van Loan \cite{golub2013matrix}, Secțiunea 5.1.
+\subsection{Construcția SVD}
 
-\subsection{Reducerea la formă tridiagonală}
-
-\subsubsection{\texttt{Tridiag\_Householder}}
-
-Orice matrice simetrică $A$ poate fi redusă la formă tridiagonală prin
-transformări de similaritate ortogonale:
-\[
-  Q^T A Q = T, \quad T \text{ tridiagonală}
-\]
-
-La pasul $k$, se alege reflectorul Householder care anulează elementele
-$a_{k+2,k}, a_{k+3,k}, \ldots, a_{n,k}$ din coloana $k$. Deoarece transformarea
-se aplică bilateral ($H T H$), simetria este păstrată.
-
-Reducerea la tridiagonal este necesară deoarece \textbf{iterația QR converge mult
-mai rapid pe matrice tridiagonale} — costul per iterație scade de la $O(n^3)$ la $O(n)$.
-Referință: Golub \& Van Loan \cite{golub2013matrix}, Algoritmul 8.3.1.
-
-\subsection{Calculul valorilor proprii}
-
-\subsubsection{\texttt{QR\_iteration}}
-
-Iterația QR pornește de la $T_0 = Q_0^T A Q_0$ (matricea tridiagonalizată) și
-aplică repetat:
-\[
-  T_k = Q_k R_k \quad \Rightarrow \quad T_{k+1} = R_k Q_k
-\]
-Secvența $T_k$ converge către o matrice diagonal, ale cărei intrări sunt
-valorile proprii ale lui $A$. Matricea acumulată $V = Q_0 Q_1 Q_2 \cdots$
-conține vectorii proprii corespunzători.
-
-Criteriul de oprire este $\|T_k - \mathrm{diag}(T_k)\|_F < \varepsilon$,
-implementat prin \texttt{norma\_extra\_diag}.
-Referință: Golub \& Van Loan \cite{golub2013matrix}, Secțiunea 8.3.
-
-\subsection{Descompunerea SVD}
-
-\subsubsection{\texttt{SVD}}
-
-Strategia de calcul are trei pași:
-
-\textbf{Pasul 1 — Valorile singulare.}
-Se observă că dacă $A = U \Sigma V^T$ atunci $A^T A = V \Sigma^T \Sigma V^T$,
-deci valorile proprii ale lui $A^T A$ sunt $\sigma_i^2$. Se calculează:
-\[
-  \lambda_i = \text{val. proprii ale } A^T A \quad \Rightarrow \quad \sigma_i = \sqrt{\lambda_i}
-\]
-prin \texttt{Tridiag\_Householder} urmat de \texttt{QR\_iteration}.
-
-\textbf{Pasul 2 — Vectorii singulari drepți $V$.}
-Vectorii proprii ai lui $A^T A$ calculați în Pasul 1 sunt coloanele lui $V$.
-
-\textbf{Pasul 3 — Vectorii singulari stângi $U$.}
-Pentru $\sigma_i > 0$:
-\[
-  u_i = \frac{A v_i}{\sigma_i}
-\]
-Pentru valorile singulare nule (rang deficient), spațiul nul este completat
-prin Gram-Schmidt aplicat pe vectorii bazei canonice.
+Pentru o matrice $A\in\mathbb{R}^{m\times n}$:
+\begin{itemize}
+  \item dacă $n\le m$, se diagonalizează manual $A^T A$ și se obține $V$;
+  \item dacă $n>m$, se diagonalizează manual $A A^T$ și se obține $U$;
+  \item valorile singulare sunt $\sigma_i=\sqrt{\lambda_i}$;
+  \item vectorii singulari lipsă se calculează prin relațiile
+  \[
+    u_i=\frac{Av_i}{\sigma_i}, \qquad
+    v_i=\frac{A^T u_i}{\sigma_i};
+  \]
+  \item bazele se completează ortonormal când matricea este dreptunghiulară sau rang deficient.
+\end{itemize}
 
 \begin{observatie}
-Abordarea prin $A^T A$ este corectă matematic, dar poate introduce erori numerice
-pentru matrici prost condiționate, deoarece numărul de condiție se ridică la pătrat.
-O alternativă mai stabilă este bidiagonalizarea directă (Golub-Reinsch), dar
-implementarea acesteia depășește scopul acestui proiect.
+Metoda prin $A^T A$ este corectă matematic și potrivită pentru proiect, dar este mai puțin stabilă numeric decât bidiagonalizarea directă Golub--Reinsch, deoarece poate pătra numărul de condiție. Acest compromis explică toleranțele folosite în teste.
 \end{observatie}
 
-\subsubsection{\texttt{SVD\_redus}}
+\section{Teste numerice}
 
-SVD-ul redus de rang $r$ returnează doar primele $r$ coloane din $U$, primele
-$r$ valori singulare și primele $r$ linii din $V^T$:
-\[
-  A \approx U_r \Sigma_r V_r^T
-\]
-Utilizare în HOSVD: pentru fiecare matricizare $A_{(n)}$, avem nevoie doar de
-primele $R_n$ coloane din $U^{(n)}$ — restul sunt aruncate. SVD-ul redus evită
-calculul și stocarea coloanelor inutile.
+Testele din \texttt{src/tests.py} verifică atât cazuri randomizate, cât și cazuri speciale:
+matrice nulă, matrice $1\times1$, vector linie, vector coloană, valori negative, matrice rară, valori foarte mari, valori foarte mici, valori mixte, matrice simetrică.
 
-\subsection{Funcții tensoriale}
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+Funcție testată & Proprietăți verificate \\
+\midrule
+\texttt{norma\_frobenius} & comparație cu \texttt{np.linalg.norm} \\
+\texttt{QR\_Gram\_Schmidt} & $QR\approx A$, ortonormalitatea lui $Q$ \\
+\texttt{QR\_Householder} & $QR\approx A$, ortonormalitatea lui $Q$ \\
+\texttt{Tridiag\_Householder} & $QTQ^T\approx A$, tridiagonalitate, simetrie \\
+\texttt{QR\_iteration} & valori/vectori proprii apropiați de NumPy \\
+\texttt{SVD} & $U\Sigma V^T\approx A$, valori singulare corecte \\
+\texttt{SVD\_redus} & forme corecte, valori singulare trunchiate corect \\
+\texttt{HOSVD} & reconstrucție exactă la rang complet \\
+\texttt{tucker\_error} & eroare Frobenius corectă \\
+\texttt{margine\_teoretica} & margine finită și aproape zero la rang complet \\
+\bottomrule
+\end{tabular}
+\caption{Rezumatul testelor numerice.}
+\end{table}
 
-\subsubsection{\texttt{permutare} și \texttt{permutare\_inv}}
+La rularea locală a testelor, toate testele au trecut. Durata totală este dominată de testul pentru iterația QR, deoarece acesta execută iterații succesive pentru aproximarea valorilor proprii.
 
-\texttt{permutare(N, mode)} construiește permutarea
-$[n, 0, 1, \ldots, n-1, n+1, \ldots, N-1]$
-care mută modul $n$ pe prima poziție. Aceasta este necesară pentru a aduce modul
-dorit pe prima axă înainte de \texttt{reshape}, astfel încât numpy să-l trateze
-corect ca "linii" ale matricei.
+\section{Comparație cu funcțiile NumPy}
 
-\texttt{permutare\_inv} construiește inversa acestei permutări, necesară pentru
-a readuce modul pe poziția originală după \texttt{reshape}.
+Comparația din \texttt{src/comparison.py} măsoară eroarea medie și timpul mediu pentru funcțiile manuale față de funcții NumPy sau expresii NumPy echivalente. NumPy este folosit aici doar ca referință numerică.
 
-\subsubsection{\texttt{matricize}}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Funcție matriceală & Eroare medie & Timp manual & Timp NumPy \\
+\midrule
+\texttt{QR\_Gram\_Schmidt} & $2.05\cdot10^{-16}$ & $8.55\cdot10^{-5}$ & $2.25\cdot10^{-5}$ \\
+\texttt{QR\_Householder} & $2.29\cdot10^{-16}$ & $1.37\cdot10^{-4}$ & $1.97\cdot10^{-5}$ \\
+\texttt{QR\_iteration} & $8.31\cdot10^{-8}$ & $1.84\cdot10^{-2}$ & $1.91\cdot10^{-5}$ \\
+\texttt{SVD} & $1.07\cdot10^{-3}$ & $3.59\cdot10^{-3}$ & $2.91\cdot10^{-5}$ \\
+\texttt{SVD\_redus} & $5.76\cdot10^{-5}$ & $3.57\cdot10^{-3}$ & $2.07\cdot10^{-5}$ \\
+\texttt{Tridiag\_Householder} & $2.42\cdot10^{-15}$ & $9.59\cdot10^{-5}$ & $1.34\cdot10^{-5}$ \\
+\texttt{norma\_frobenius} & $4.44\cdot10^{-16}$ & $3.68\cdot10^{-6}$ & $2.01\cdot10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\caption{Comparație între funcțiile matriceale implementate manual și NumPy.}
+\end{table}
 
-Implementează Definiția matricizării în trei pași:
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+Funcție tensorială & Eroare medie & Timp manual & Timp referință \\
+\midrule
+\texttt{matricize} & $0$ & $1.49\cdot10^{-6}$ & $1.11\cdot10^{-6}$ \\
+\texttt{mode\_n\_product} & $0$ & $5.68\cdot10^{-6}$ & $1.03\cdot10^{-5}$ \\
+\texttt{permutare} & $0$ & $3.02\cdot10^{-7}$ & $3.29\cdot10^{-7}$ \\
+\texttt{permutare\_inv} & $0$ & $4.92\cdot10^{-7}$ & $2.90\cdot10^{-6}$ \\
+\texttt{tucker\_error} & $0$ & $2.34\cdot10^{-5}$ & $4.66\cdot10^{-6}$ \\
+\texttt{margine\_teoretica} & $4.12\cdot10^{-5}$ & $8.05\cdot10^{-3}$ & $4.53\cdot10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\caption{Comparație pentru funcțiile tensoriale.}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{matrix_accuracy.png}
+\caption{Acuratețea funcțiilor matriceale implementate manual.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{matrix_runtime.png}
+\caption{Timpul de rulare al funcțiilor matriceale comparat cu NumPy.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{tensor_accuracy.png}
+\caption{Acuratețea funcțiilor tensoriale.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{tensor_runtime.png}
+\caption{Timpul de rulare al funcțiilor tensoriale.}
+\end{figure}
+
+\subsection{Interpretarea comparației}
+
+Erorile pentru QR, tridiagonalizare, norme și operații tensoriale elementare sunt foarte mici, de ordinul preciziei mașinii. SVD-ul are eroare mai mare decât aceste funcții deoarece se bazează pe diagonalizarea lui $A^TA$ sau $AA^T$, ceea ce amplifică erorile pentru matrice prost condiționate. Totuși, eroarea medie obținută este suficient de mică pentru aplicația de compresie, unde scopul este aproximarea controlată, nu reconstrucția exactă.
+
+Funcțiile NumPy sunt mult mai rapide deoarece folosesc implementări optimizate în biblioteci numerice compilate. Implementarea manuală rămâne valoroasă pentru proiect deoarece explică transparent pașii matematici și permite testarea fiecărei componente.
+
+\section{Aplicația practică: compresia imaginilor}
+
+\subsection{Motivație}
+
+Compresia imaginilor este o aplicație naturală a SVD, deoarece imaginile conțin redundanță spațială: zone apropiate au adesea culori asemănătoare. Prin păstrarea doar a componentelor dominante se poate reduce cantitatea de date stocată, menținând o reconstrucție vizual acceptabilă.
+
+În loc să aplicăm SVD separat pe fiecare canal, proiectul tratează imaginea color ca tensor $H\times W\times 3$ și folosește HOSVD/Tucker. Această abordare păstrează explicit structura pe trei moduri: înălțime, lățime și canal de culoare.
+
+\subsection{Algoritmul de compresie}
+
+Funcția \texttt{compress\_image} aplică următorii pași:
 \begin{enumerate}
-  \item Permutare axe: modul $n$ devine prima dimensiune
-  \item Calculul numărului de coloane: $\prod_{k \neq n} I_k$
-  \item Aplatizare prin \texttt{reshape(I\_n, -1)}
+  \item citește imaginea și o convertește în RGB;
+  \item normalizează valorile pixelilor în intervalul $[0,1]$;
+  \item împarte imaginea în blocuri de dimensiune \texttt{blockSize}$\times$\texttt{blockSize}$\times 3$;
+  \item aplică HOSVD pe fiecare bloc cu ranguri $[R_b,R_b,3]$;
+  \item reconstruiește blocurile comprimate;
+  \item calculează raportul de compresie, eroarea absolută și eroarea relativă.
 \end{enumerate}
 
-\subsubsection{\texttt{mode\_n\_product}}
-
-Implementează Proprietatea \ref{prop:mode-n-mat}:
-$(\mathcal{A} \times_n M)_{(n)} = M \cdot A_{(n)}$
-
-Pașii:
-\begin{enumerate}
-  \item Matricizare pe modul $n$: $A_{(n)} \leftarrow \texttt{matricize}(\mathcal{A}, n)$
-  \item Înmulțire matriceală: $B_{(n)} \leftarrow M \cdot A_{(n)}$
-  \item Refacere tensor: \texttt{reshape} la forma corectă + permutare inversă
-\end{enumerate}
-
-\subsubsection{\texttt{HOSVD}}
-
-Implementează direct algoritmul HOSVD descris în Secțiunea 1.3.2.
-Folosește \texttt{SVD\_redus} în locul lui \texttt{SVD} complet pentru eficiență:
-calculează direct cele $R_n$ coloane necesare fără a construi întreaga matrice $U$.
-
-\subsubsection{\texttt{reconstruct}}
-
-Inversul compresiei Tucker:
+Rangul spațial este controlat de factorul de compresie:
 \[
-  \tilde{\mathcal{A}} = \mathcal{G} \times_1 \hat{U}^{(1)} \times_2 \hat{U}^{(2)} \times_3 \hat{U}^{(3)}
+  R_b = \max(1,\lfloor \texttt{blockSize}\cdot \texttt{compressionFactor}\rfloor).
 \]
-Dimensiunile cresc de la $(R_1, R_2, R_3)$ înapoi la $(I_1, I_2, I_3)$.
+Canalul de culoare este păstrat cu rang $3$, deoarece reducerea acestuia poate altera puternic culorile.
 
-\subsubsection{\texttt{tucker\_error}}
+\subsection{Interfața aplicației}
 
-Calculează $\|\mathcal{A} - \tilde{\mathcal{A}}\|_F$ apelând \texttt{reconstruct}
-și aplicând \texttt{norma\_frobenius} pe diferența aplatizată.
+Aplicația Streamlit permite:
+\begin{itemize}
+  \item încărcarea unei imagini JPG/PNG;
+  \item alegerea factorului de compresie;
+  \item alegerea dimensiunii blocului;
+  \item vizualizarea imaginii originale și a imaginii reconstruite;
+  \item afișarea raportului de compresie, erorii relative și timpului de execuție;
+  \item descărcarea imaginii reconstruite și a datelor Tucker comprimate.
+\end{itemize}
 
-\subsubsection{\texttt{margine\_teoretica}}
+\subsection{Măsuri de evaluare}
 
-Calculează membrul drept din inegalitatea de eroare HOSVD fără a reconstitui tensorul.
-Complexitate: $O(N \cdot \max_n(I_n \cdot \prod_{k \neq n} I_k))$ — semnificativ
-mai ieftin decât reconstrucția completă pentru tensori mari.
+Raportul teoretic de compresie pentru un bloc este
+\[
+  CR =
+  \frac{I_1I_2I_3}
+  {R_1R_2R_3 + I_1R_1 + I_2R_2 + I_3R_3}.
+\]
+
+Eroarea absolută este
+\[
+  E = \|\mathcal{A}-\tilde{\mathcal{A}}\|_F,
+\]
+iar eroarea relativă afișată în aplicație este
+\[
+  E_{rel} =
+  \frac{\|\mathcal{A}-\tilde{\mathcal{A}}\|_F}
+  {\|\mathcal{A}\|_F}\cdot 100.
+\]
+
+\section{Avantaje și dezavantaje}
+
+\subsection{Avantaje}
+
+\begin{itemize}
+  \item Implementarea este complet transparentă: fiecare etapă numerică este scrisă manual.
+  \item SVD-ul redus permite păstrarea celor mai importante componente.
+  \item Tucker/HOSVD tratează imaginea color ca tensor, nu ca trei matrici independente.
+  \item Aplicația oferă control direct asupra compromisului compresie--calitate.
+  \item Testele acoperă atât funcțiile matriceale, cât și funcțiile tensoriale.
+\end{itemize}
+
+\subsection{Dezavantaje}
+
+\begin{itemize}
+  \item Implementarea manuală este mai lentă decât NumPy.
+  \item Calculul SVD prin $A^TA$ poate fi sensibil numeric la matrice prost condiționate.
+  \item HOSVD nu oferă cea mai bună aproximare Tucker posibilă; HOOI ar putea îmbunătăți rezultatele.
+  \item Compresia pe blocuri poate introduce discontinuități vizuale între blocuri pentru factori de compresie foarte mici.
+  \item Raportul de compresie calculat este teoretic și poate diferi de dimensiunea efectivă a fișierelor comprimate, deoarece formatele JPG/PNG/NPZ au propriile mecanisme de codare.
+\end{itemize}
+
+\section{Concluzii}
+
+Proiectul îndeplinește obiectivul principal: implementează SVD manual și îl folosește într-o aplicație practică de compresie a imaginilor. Rezultatele numerice arată că funcțiile auxiliare sunt foarte precise, iar SVD-ul obține o aproximare suficient de bună pentru compresie. Comparativ cu NumPy, implementarea manuală este mai lentă, dar aceasta este o consecință normală a implementării didactice în Python pur și a lipsei optimizărilor de nivel jos.
+
+Aplicația finală demonstrează clar legătura dintre teoria SVD, aproximarea de rang redus și utilizarea practică în compresia datelor vizuale.
 
 \begin{thebibliography}{9}
 

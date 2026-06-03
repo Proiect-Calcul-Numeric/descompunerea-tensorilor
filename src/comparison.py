@@ -36,6 +36,23 @@ RESULTS_DIR = Path(__file__).resolve().parents[1] / "comparison_results"
 MATRIX_SIZES = [3, 5, 7, 9]
 TENSOR_SHAPES = [(3, 4, 5), (4, 5, 6)]
 REPETITIONS = 3
+PLOT_LABELS = {
+    "HOSVD + reconstruct": "HOSVD + reconstrucție",
+    "QR_Gram_Schmidt": "QR Gram-Schmidt",
+    "QR_Householder": "QR Householder",
+    "QR_iteration": "Iterație QR",
+    "SVD_redus": "SVD redus",
+    "Tridiag_Householder": "Tridiagonalizare",
+    "margine_teoretica": "Margine teoretică",
+    "matricize": "Matricizare",
+    "mode_n_product": "Produs mod-n",
+    "norma_extra_diag": "Normă extra-diag.",
+    "norma_frobenius": "Normă Frobenius",
+    "permutare": "Permutare",
+    "permutare_inv": "Permutare inversă",
+    "toate_extra_diag_sub_prag": "Extra-diag. sub prag",
+    "tucker_error": "Eroare Tucker",
+}
 
 
 def timed_call(function, *args, repetitions=REPETITIONS, **kwargs):
@@ -373,13 +390,13 @@ def aggregate_records(records):
 
 
 def plot_accuracy(summary, title, output_path):
-    labels = [row["name"] for row in summary]
+    labels = [PLOT_LABELS.get(row["name"], row["name"]) for row in summary]
     errors = [max(row["error"], 1e-16) for row in summary]
 
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.bar(labels, errors, color="#2f6f9f")
     ax.set_yscale("log")
-    ax.set_ylabel("Mean absolute/relative error (log scale)")
+    ax.set_ylabel("Eroare medie absolută/relativă (scară logaritmică)")
     ax.set_title(title)
     ax.tick_params(axis="x", labelrotation=35)
     ax.grid(axis="y", which="both", alpha=0.25)
@@ -389,7 +406,7 @@ def plot_accuracy(summary, title, output_path):
 
 
 def plot_runtime(summary, title, output_path):
-    labels = [row["name"] for row in summary]
+    labels = [PLOT_LABELS.get(row["name"], row["name"]) for row in summary]
     x = np.arange(len(labels))
     width = 0.38
     manual_times = [max(row["manual_time"], 1e-9) for row in summary]
@@ -399,7 +416,7 @@ def plot_runtime(summary, title, output_path):
     ax.bar(x - width / 2, manual_times, width, label="Manual", color="#b24c38")
     ax.bar(x + width / 2, numpy_times, width, label="NumPy", color="#3f7f4f")
     ax.set_yscale("log")
-    ax.set_ylabel("Mean runtime in seconds (log scale)")
+    ax.set_ylabel("Timp mediu de rulare în secunde (scară logaritmică)")
     ax.set_title(title)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=35, ha="right")
@@ -435,22 +452,22 @@ def main():
 
     plot_accuracy(
         matrix_summary,
-        "Matrix functions: NumPy vs manual accuracy",
+        "Funcții matriceale: acuratețe manual vs NumPy",
         RESULTS_DIR / "matrix_accuracy.png",
     )
     plot_runtime(
         matrix_summary,
-        "Matrix functions: NumPy vs manual runtime",
+        "Funcții matriceale: timp de rulare manual vs NumPy",
         RESULTS_DIR / "matrix_runtime.png",
     )
     plot_accuracy(
         tensor_summary,
-        "Tensor functions: NumPy primitive comparison accuracy",
+        "Funcții tensoriale: acuratețe față de referința NumPy",
         RESULTS_DIR / "tensor_accuracy.png",
     )
     plot_runtime(
         tensor_summary,
-        "Tensor functions: NumPy primitive comparison runtime",
+        "Funcții tensoriale: timp de rulare față de referința NumPy",
         RESULTS_DIR / "tensor_runtime.png",
     )
 
