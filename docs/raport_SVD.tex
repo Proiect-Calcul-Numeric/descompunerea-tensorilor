@@ -21,13 +21,54 @@
 \newtheorem{teorema}{Teoremă}[section]
 \newtheorem{observatie}{Observație}[section]
 
-\title{\textbf{Descompunerea valorilor singulare și compresia imaginilor prin Tucker/HOSVD}}
-\author{Proiect Calcul Numeric}
-\date{Iunie 2026}
-
 \begin{document}
 
-\maketitle
+\hypersetup{pageanchor=false}
+
+\begin{titlepage}
+\centering
+
+{\large Universitatea din București\par}
+\vspace{0.35cm}
+{\large Facultatea de Matematică și Informatică\par}
+\vspace{0.35cm}
+{\large Specializarea Calculatoare și Tehnologia Informației\par}
+
+\vspace{3.2cm}
+
+{\Large \textbf{Proiect Calcul Numeric}\par}
+\vspace{1.2cm}
+{\huge \textbf{Descompunerea valorilor singulare}\par}
+\vspace{0.35cm}
+{\huge \textbf{și compresia imaginilor prin Tucker/HOSVD}\par}
+
+\vspace{3.4cm}
+
+\begin{minipage}{0.82\textwidth}
+\begin{flushleft}
+\textbf{Coordonator științific:}\\
+Lect. dr. Mihai Bucătaru
+\end{flushleft}
+
+\vspace{1.1cm}
+
+\begin{flushleft}
+\textbf{Autori:}\\
+Necula Matei\\
+Neacșu Rareș Andrei\\
+Murariu Tudor Cătălin
+\end{flushleft}
+\end{minipage}
+
+\vfill
+
+{\large București}\\
+{\large Iunie 2026}
+
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
 
 \begin{abstract}
 Acest proiect implementează manual descompunerea valorilor singulare (SVD), fără folosirea funcțiilor NumPy predefinite pentru descompuneri, diagonalizări sau factorizări în codul principal. SVD-ul este apoi folosit în algoritmul HOSVD pentru obținerea unei descompuneri Tucker pe blocuri de imagine. Aplicația finală permite compresia imaginilor, reconstrucția lor și evaluarea raportului de compresie, a erorii relative și a timpului de execuție.
@@ -35,6 +76,8 @@ Acest proiect implementează manual descompunerea valorilor singulare (SVD), fă
 
 \tableofcontents
 \newpage
+
+\pagenumbering{arabic}
 
 \section{Obiectivul proiectului}
 
