@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Descompunerea valorilor singulare și compresia imaginilor</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/theme/white.css">
+  <style>
+    :root {
+      --paper: #0e1117;
+      --ink: #f8fafc;
+      --muted: #a6adbb;
+      --line: rgba(250, 250, 250, 0.12);
+      --soft: rgba(38, 39, 48, 0.74);
+      --soft-strong: rgba(38, 39, 48, 0.92);
+      --red: #ff4b4b;
+      --gray: #8b92a1;
+      --pale-red: rgba(255, 75, 75, 0.12);
+      --glass: rgba(26, 28, 36, 0.68);
+    }
+
+    .reveal {
+      color: var(--ink);
+      font-family: "Inter", "Aptos", "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 14% 18%, rgba(255, 75, 75, 0.10), transparent 28%),
+        radial-gradient(circle at 82% 12%, rgba(140, 148, 164, 0.10), transparent 30%),
+        linear-gradient(180deg, #11141c 0%, var(--paper) 42%, #090c12 100%);
+    }
+
+    .reveal .slides {
+      text-align: left;
+    }
+
+    .reveal section {
+      box-sizing: border-box;
+      padding: 34px 52px;
+    }
+
+    .reveal h1,
+    .reveal h2,
+    .reveal h3 {
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      text-transform: none;
+      letter-spacing: 0;
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    .reveal h1 {
+      font-size: 2.15em;
+      max-width: 920px;
+    }
+
+    .reveal h2 {
+      font-size: 1.35em;
+      margin-bottom: 26px;
+    }
+
+    .reveal h2::after {
+      content: "";
+      display: block;
+      width: 44px;
+      height: 4px;
+      background: var(--red);
+      margin-top: 12px;
+      box-shadow: 0 0 18px rgba(255, 75, 75, 0.34);
+    }
+
+    .reveal h3 {
+      font-size: 0.8em;
+      margin-bottom: 10px;
+    }
+
+    .reveal p,
+    .reveal li {
+      font-size: 0.52em;
+      line-height: 1.45;
+    }
+
+    .reveal small {
+      color: var(--muted);
+      font-size: 0.42em;
+    }
+
+    .subtitle {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 0.9em;
+      margin-top: 12px;
+      color: #f4f4f5;
+      max-width: 850px;
+    }
+
+    .meta {
+      margin-top: 88px;
+      color: var(--muted);
+      font-size: 0.44em;
+      line-height: 1.55;
+    }
+
+    .accent-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 12px;
+      height: 100%;
+      background: var(--red);
+      box-shadow: 0 0 22px rgba(255, 75, 75, 0.45);
+    }
+
+    .top-rule {
+      height: 1px;
+      background: var(--line);
+      margin: 22px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid.two {
+      grid-template-columns: 1.05fr 1fr;
+      gap: 30px;
+    }
+
+    .grid.four {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      padding: 18px 20px;
+      min-height: 132px;
+      box-sizing: border-box;
+      position: relative;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 5px;
+      height: 100%;
+      background: var(--red);
+    }
+
+    .card.gray::before {
+      background: var(--gray);
+    }
+
+    .card h3 {
+      padding-left: 2px;
+    }
+
+    .card p {
+      color: #e6e8ee;
+      margin: 0;
+    }
+
+    .formula {
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--red);
+      background: rgba(38, 39, 48, 0.78);
+      border: 1px solid var(--line);
+      padding: 18px 22px;
+      text-align: center;
+      font-size: 0.82em;
+      margin: 18px 0;
+      backdrop-filter: blur(12px);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+    }
+
+    .formula.plain {
+      background: transparent;
+      border: 0;
+      padding: 8px 0;
+      text-align: left;
+      font-size: 0.78em;
+    }
+
+    .lead {
+      font-size: 0.62em !important;
+      max-width: 900px;
+      color: #eef1f7;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .callout {
+      border-left: 5px solid var(--red);
+      background: var(--pale-red);
+      padding: 16px 20px;
+      margin-top: 18px;
+      backdrop-filter: blur(10px);
+    }
+
+    .callout p {
+      margin: 0;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .step {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      padding: 18px 16px;
+      min-height: 155px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.20);
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      color: white;
+      font-weight: 700;
+      font-size: 0.42em;
+      margin-bottom: 10px;
+    }
+
+    .plot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .plot {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+      padding: 10px;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    }
+
+    .plot img {
+      width: 100%;
+      display: block;
+    }
+
+    .caption {
+      color: var(--muted);
+      font-size: 0.38em !important;
+      margin-top: 8px;
+    }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .file {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      color: var(--red);
+      font-size: 0.5em;
+      margin-bottom: 10px;
+    }
+
+    .footer-note {
+      position: absolute;
+      right: 52px;
+      bottom: 28px;
+      color: var(--muted);
+      font-size: 0.34em;
+    }
+
+    .reveal .slides section.present h1,
+    .reveal .slides section.present h2 {
+      animation: titleIn 520ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .reveal .slides section.present .lead,
+    .reveal .slides section.present .subtitle,
+    .reveal .slides section.present .meta {
+      animation: fadeRise 560ms cubic-bezier(.2, .8, .2, 1) 60ms both;
+    }
+
+    .reveal .slides section.present .card,
+    .reveal .slides section.present .step,
+    .reveal .slides section.present .plot,
+    .reveal .slides section.present .formula,
+    .reveal .slides section.present .flow-node {
+      animation: cardIn 560ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .reveal .slides section.present .card:nth-child(2),
+    .reveal .slides section.present .step:nth-child(2),
+    .reveal .slides section.present .flow-node:nth-child(2) {
+      animation-delay: 50ms;
+    }
+
+    .reveal .slides section.present .card:nth-child(3),
+    .reveal .slides section.present .step:nth-child(3),
+    .reveal .slides section.present .flow-node:nth-child(3) {
+      animation-delay: 90ms;
+    }
+
+    .reveal .slides section.present .step:nth-child(4),
+    .reveal .slides section.present .flow-node:nth-child(4) {
+      animation-delay: 130ms;
+    }
+
+    .reveal .slides section.present .diagram,
+    .reveal .slides section.present .tensor-visual,
+    .reveal .slides section.present .pipeline-visual {
+      animation: diagramIn 620ms cubic-bezier(.2, .8, .2, 1) 80ms both;
+    }
+
+    @keyframes titleIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes fadeRise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes diagramIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+    }
+
+    .diagram {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      padding: 16px;
+      box-sizing: border-box;
+      backdrop-filter: blur(14px);
+    }
+
+    .svd-diagram {
+      display: grid;
+      grid-template-columns: 1fr 42px 1fr 42px 1fr 42px 1fr;
+      align-items: center;
+      gap: 10px;
+      min-height: 190px;
+      text-align: center;
+    }
+
+    .matrix-shape {
+      border: 2px solid var(--red);
+      background: linear-gradient(135deg, rgba(255, 75, 75, 0.10), rgba(38, 39, 48, 0.78));
+      display: grid;
+      place-items: center;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--red);
+      min-height: 95px;
+      font-size: .72em;
+    }
+
+    .matrix-shape.tall { min-height: 155px; }
+    .matrix-shape.diag {
+      background:
+        linear-gradient(135deg, transparent 46%, rgba(255,75,75,.38) 47%, rgba(255,75,75,.38) 53%, transparent 54%),
+        rgba(38, 39, 48, 0.78);
+    }
+
+    .operator {
+      color: var(--gray);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .85em;
+      text-align: center;
+    }
+
+    .tensor-visual {
+      position: relative;
+      height: 290px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+    }
+
+    .tensor-layer {
+      position: absolute;
+      width: 210px;
+      height: 150px;
+      border: 2px solid rgba(248,250,252,.25);
+      box-shadow: 0 18px 32px rgba(0,0,0,.25);
+    }
+
+    .tensor-layer.r { left: 70px; top: 78px; background: rgba(255,75,75,.28); }
+    .tensor-layer.g { left: 125px; top: 55px; background: rgba(166,173,187,.18); }
+    .tensor-layer.b { left: 180px; top: 32px; background: rgba(255,255,255,.08); }
+
+    .axis-label {
+      position: absolute;
+      font-size: .42em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .axis-h { left: 78px; top: 238px; }
+    .axis-w { left: 365px; top: 112px; transform: rotate(-22deg); }
+    .axis-c { left: 410px; top: 44px; color: var(--red); }
+
+    .unfolding {
+      display: grid;
+      grid-template-columns: 1fr 52px 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+    }
+
+    .mini-grid span {
+      display: block;
+      height: 22px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    .mini-grid span:nth-child(3n) { background: rgba(255,75,75,.18); }
+    .mini-grid span:nth-child(4n) { background: rgba(166,173,187,.20); }
+
+    .flowchart {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 12px;
+    }
+
+    .flow-node {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      padding: 14px 12px;
+      min-height: 118px;
+      position: relative;
+      box-sizing: border-box;
+      backdrop-filter: blur(14px);
+    }
+
+    .flow-node::after {
+      content: "→";
+      position: absolute;
+      right: -15px;
+      top: 42%;
+      color: var(--red);
+      font-weight: 700;
+      font-size: .7em;
+      z-index: 2;
+    }
+
+    .flow-node:last-child::after {
+      display: none;
+    }
+
+    .flow-node .fn {
+      color: var(--red);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: .43em;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .flow-node p {
+      font-size: .38em;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .flowchart.compact {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .pipeline-visual .flowchart {
+      gap: 8px;
+      margin-top: 0;
+    }
+
+    .pipeline-visual .flow-node {
+      min-height: 180px;
+      padding: 14px 10px;
+    }
+
+    .pipeline-visual .flow-node .fn {
+      font-size: .34em;
+      overflow-wrap: anywhere;
+    }
+
+    .pipeline-visual .flow-node p {
+      font-size: .34em;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .metric {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      padding: 16px 18px;
+      text-align: center;
+      backdrop-filter: blur(14px);
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--red);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .75em;
+      margin-bottom: 8px;
+    }
+
+    .reveal .slide-number {
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .reveal .controls {
+      color: var(--red);
+    }
+
+    .reveal .progress {
+      color: var(--red);
+      height: 3px;
+    }
+
+    @media print {
+      .reveal section {
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-transition="fade">
+        <div class="accent-bar"></div>
+        <h1>Descompunerea valorilor singulare</h1>
+        <div class="subtitle">și compresia imaginilor prin Tucker/HOSVD</div>
+        <div class="meta">
+          <strong>Coordonator:</strong> Lect. Univ. Dr. Mihai Bucătaru<br>
+          <strong>Autori:</strong> Necula Matei · Neacșu Rareș Andrei · Murariu Tudor-Călin<br>
+          București, Iunie 2026
+        </div>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Obiectivul proiectului</h2>
+        <p class="lead">Proiectul are două direcții egale: implementarea manuală a metodelor numerice din spatele SVD și folosirea lor într-un compresor de imagini color bazat pe Tucker/HOSVD.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Matematică</h3>
+            <p>SVD, aproximare de rang redus, tensori, matricizare și produs mod-n.</p>
+          </div>
+          <div class="card gray">
+            <h3>Implementare</h3>
+            <p>QR, Householder, tridiagonalizare, iterație QR și construcția SVD.</p>
+          </div>
+          <div class="card">
+            <h3>Aplicație</h3>
+            <p>Compresia imaginilor RGB și Grayscale prin descompunere Tucker pe blocuri.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Spune că prezentarea are două axe: matematica este importantă, dar se finalizează într-o aplicație concretă de compresie a imaginilor.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>SVD: ideea matematică</h2>
+        <div class="grid two">
+          <div>
+            <p class="lead">SVD descompune o matrice în direcții ortogonale și valori singulare. Valorile singulare mari descriu componentele dominante ale matricei.</p>
+            <div class="formula">\( A = U \Sigma V^T \)</div>
+            <p>În această formulă, \(U\) și \(V\) sunt ortogonale, iar \(\Sigma\) este pseudo-diagonală.</p>
+          </div>
+          <div class="diagram svd-diagram">
+            <div class="matrix-shape tall">A</div>
+            <div class="operator">=</div>
+            <div class="matrix-shape tall">U</div>
+            <div class="operator">×</div>
+            <div class="matrix-shape diag">Σ</div>
+            <div class="operator">×</div>
+            <div class="matrix-shape">V<sup>T</sup></div>
+          </div>
+        </div>
+        <div class="callout">
+          <p><strong>Interpretare:</strong> o matrice este rescrisă ca o combinație de componente ordonate după importanță. Pentru compresie, păstrăm doar componentele dominante.</p>
+        </div>
+        <aside class="notes">
+          Explică SVD ca schimbare de perspectivă: U și V dau direcțiile, Sigma spune cât de importante sunt. Nu intra în demonstrație aici.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Aproximarea de rang redus</h2>
+        <div class="grid two">
+          <div>
+            <p>În loc să păstrăm toate valorile singulare, alegem doar primele \(r\):</p>
+            <div class="formula">\( A_r = U_r \Sigma_r V_r^T \)</div>
+            <p>Teorema Eckart-Young-Mirsky garantează că această aproximare este optimă în norma Frobenius dintre toate matricele de rang cel mult \(r\).</p>
+          </div>
+          <div>
+            <div class="formula">\( \|A - A_r\|_F = \min_{\mathrm{rang}(B)\le r}\|A - B\|_F \)</div>
+            <div class="callout">
+              <p><strong>Legătura cu imaginea:</strong> păstrăm informația dominantă și acceptăm o eroare controlată pentru a reduce datele stocate.</p>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          Aici explică de ce rangul redus este fundamentul compresiei: mai puține componente înseamnă mai puține date, dar apare eroare controlată.
+        </aside>
+      </section>
+
+      <section data-transition="fade">
+        <h2>Cum se calculează SVD-ul în proiect</h2>
+        <p class="lead">Implementarea nu apelează direct `np.linalg.svd`, `eig`, `eigh` sau `qr` în codul principal. Metodele sunt construite pas cu pas.</p>
+        <div class="steps">
+          <div class="step">
+            <h3>Matrice simetrică</h3>
+            <p>Se pornește de la \(A^T A\) sau \(A A^T\), în funcție de dimensiunea matricei.</p>
+          </div>
+          <div class="step">
+            <h3>Householder</h3>
+            <p>Reflexiile reduc matricea la formă tridiagonală, păstrând valorile proprii.</p>
+          </div>
+          <div class="step">
+            <h3>Iterație QR</h3>
+            <p>QR cu shift aproximează valorile proprii mai rapid decât iterația simplă.</p>
+          </div>
+          <div class="step">
+            <h3>SVD final</h3>
+            <p>\(\sigma_i=\sqrt{\lambda_i}\), apoi se construiesc vectorii singulari.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Accentul aici este că proiectul implementează manual lanțul numeric. Menționează că NumPy apare ca referință în teste, nu ca metodă principală.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>De la matrice la tensor</h2>
+        <div class="grid two">
+          <div>
+            <p class="lead">O imagine color are trei dimensiuni: înălțime, lățime și canal RGB. De aceea este natural să fie tratată ca tensor.</p>
+            <div class="formula">\( \mathcal{A} \in \mathbb{R}^{H \times W \times 3} \)</div>
+            <p>Un tensor este o generalizare a vectorilor și matricelor: vectorul are un mod, matricea are două moduri, iar imaginea RGB are trei moduri.</p>
+          </div>
+          <div class="tensor-visual">
+            <div class="tensor-layer r"></div>
+            <div class="tensor-layer g"></div>
+            <div class="tensor-layer b"></div>
+            <div class="axis-label axis-h">H: înălțime</div>
+            <div class="axis-label axis-w">W: lățime</div>
+            <div class="axis-label axis-c">3 canale RGB</div>
+          </div>
+        </div>
+        <aside class="notes">
+          Spune simplu: nu tratăm imaginea ca trei matrici complet separate, ci ca un obiect cu trei direcții. Asta motivează Tucker/HOSVD.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Cum folosim tensorul în calcul</h2>
+        <p class="lead">Pentru a aplica SVD pe un tensor, îl transformăm temporar în matrici. Această operație se numește matricizare sau unfolding.</p>
+        <div class="unfolding">
+          <div class="diagram">
+            <h3>Tensor imagine</h3>
+            <div class="mini-grid" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p class="caption">Dimensiuni: \(H \times W \times 3\)</p>
+          </div>
+          <div class="operator">→</div>
+          <div class="diagram">
+            <h3>Matricizări</h3>
+            <p>\(A_{(1)}\): rânduri pe înălțime</p>
+            <p>\(A_{(2)}\): rânduri pe lățime</p>
+            <p>\(A_{(3)}\): rânduri pe canal RGB</p>
+          </div>
+        </div>
+        <div class="callout">
+          <p>Produsul mod-n este calculat prin regula \((\mathcal{A}\times_n M)_{(n)} = M A_{(n)}\), deci operațiile tensoriale devin înmulțiri matriceale obișnuite.</p>
+        </div>
+        <aside class="notes">
+          Aici explică de ce matricizarea este puntea dintre SVD și HOSVD: SVD știe să lucreze cu matrici, deci transformăm fiecare mod în matrice.
+        </aside>
+      </section>
+
+      <section data-transition="fade">
+        <h2>Tucker și HOSVD</h2>
+        <div class="grid two">
+          <div>
+            <p class="lead">Descompunerea Tucker extinde ideea SVD la tensori: păstrează un nucleu comprimat numit core tensor și extragerea unor baze ortonormale care definesc spațiile corespunzătoare fiecărui mod al unui tensor.</p>
+            <div class="formula">\( \widetilde{\mathcal{A}} = \mathcal{G} \times_1 U^{(1)} \times_2 U^{(2)} \times_3 U^{(3)} \)</div>
+            <p>\(\mathcal{G}\) este tensorul de bază, iar \(U^{(n)}\) conține direcțiile dominante pentru modul \(n\).</p>
+          </div>
+          <div class="pipeline-visual">
+            <div class="flowchart compact">
+              <div class="flow-node">
+                <div class="fn">tensor</div>
+                <p>\(\mathcal{A}\)</p>
+              </div>
+              <div class="flow-node">
+                <div class="fn">matricize</div>
+                <p>\(A_{(1)}, A_{(2)}, A_{(3)}\)</p>
+              </div>
+              <div class="flow-node">
+                <div class="fn">SVD_redus</div>
+                <p>păstrăm \(R_n\) coloane</p>
+              </div>
+              <div class="flow-node">
+                <div class="fn">produs mod-n</div>
+                <p>proiectăm pe moduri</p>
+              </div>
+              <div class="flow-node">
+                <div class="fn">G, Us</div>
+                <p>forma Tucker comprimată</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">
+          Definește G ca nucleu comprimat. Spune că U1, U2 și U3 sunt bazele importante pentru înălțime, lățime și culoare.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Compresorul de imagini</h2>
+        <p class="lead">Aplicația practică folosește HOSVD/Tucker pe blocuri de imagine. Scopul nu este compresie fără pierderi, ci un compromis controlat între dimensiune, eroare și calitate vizuală.</p>
+        <div class="steps">
+          <div class="step">
+            <h3>Citire</h3>
+            <p>Imaginea este încărcată și normalizată în intervalul \([0,1]\).</p>
+          </div>
+          <div class="step">
+            <h3>Blocuri</h3>
+            <p>Imaginea este împărțită în blocuri \(blockSize \times blockSize \times 3\).</p>
+          </div>
+          <div class="step">
+            <h3>HOSVD</h3>
+            <p>Fiecare bloc este comprimat cu ranguri \([R_b, R_b, 3]\).</p>
+          </div>
+          <div class="step">
+            <h3>Reconstrucție</h3>
+            <p>Blocurile sunt reconstruite și se calculează raportul de compresie și eroarea.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Prezintă compresorul ca aplicația finală: imaginea devine tensor, tensorul este împărțit în blocuri, iar fiecare bloc este aproximat Tucker.
+        </aside>
+      </section>
+
+      <section data-transition="fade">
+        <h2>Rangul și raportul de compresie</h2>
+        <div class="grid two">
+          <div>
+            <p>Rangul spațial este controlat prin factorul de compresie:</p>
+            <div class="formula">\( R_b = \max(1,\lfloor blockSize \cdot compressionFactor \rfloor) \)</div>
+            <p>Canalul RGB rămâne cu rang 3, pentru a păstra cât mai bine culorile.</p>
+          </div>
+          <div>
+            <p>Raportul teoretic pentru un bloc compară datele inițiale cu datele Tucker:</p>
+            <div class="formula">\( CR = \frac{\text{date originale}}{\text{date comprimate}} \)</div>
+            <p class="muted">Datele comprimate includ nucleul \(G\) și matricile factoriale \(U^{(1)}, U^{(2)}, U^{(3)}\). Un \(CR\) mai mare înseamnă mai puține date stocate, dar de obicei și eroare mai mare.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Menționează că factorul de compresie controlează rangul spațial. Canalul RGB rămâne complet pentru a evita schimbări puternice de culoare.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Fluxul compresiei în cod</h2>
+        <p class="lead">Ordinea de mai jos este fluxul real: `main.py` pornește compresia, `image_compressor.py` lucrează pe blocuri, iar `matematica.py` face HOSVD și operațiile tensoriale.</p>
+        <div class="flowchart">
+          <div class="flow-node">
+            <div class="fn">main.py</div>
+            <p>Butonul „Execută compresia” pornește algoritmul.</p>
+          </div>
+          <div class="flow-node">
+            <div class="fn">compress_image(...)</div>
+            <p>Citește imaginea, convertește RGB, normalizează tensorul și calculează blocurile.</p>
+          </div>
+          <div class="flow-node">
+            <div class="fn">HOSVD(block)</div>
+            <p>Pentru fiecare bloc, creează reprezentarea Tucker: \(G\) și \(U^{(n)}\).</p>
+          </div>
+          <div class="flow-node">
+            <div class="fn">SVD_redus(A_n)</div>
+            <p>În HOSVD, fiecare matricizare este aproximată prin SVD redus.</p>
+          </div>
+          <div class="flow-node">
+            <div class="fn">reconstruct(G, Us)</div>
+            <p>Reconstruiește blocul comprimat prin produse mod-n succesive.</p>
+          </div>
+          <div class="flow-node">
+            <div class="fn">tucker_error + norma_frobenius</div>
+            <p>Calculează eroarea absolută și eroarea relativă de reconstrucție.</p>
+          </div>
+        </div>
+        <div class="metric-strip">
+          <div class="metric"><strong>compressionRate</strong><p>raport teoretic între datele originale și Tucker</p></div>
+          <div class="metric"><strong>relativeError</strong><p>eroare Frobenius raportată la norma originalului</p></div>
+          <div class="metric"><strong>execTime</strong><p>timp măsurat în `main.py` cu `time.time()`</p></div>
+        </div>
+        <aside class="notes">
+          Nu intra în detalii de Streamlit. Important este lanțul: main apelează compress_image, apoi pentru fiecare bloc intră HOSVD, SVD redus și reconstrucție.
+        </aside>
+      </section>
+
+      
+
+      <section data-transition="slide">
+        <h2>Arhitectura proiectului</h2>
+        <div class="architecture">
+          <div class="card">
+            <div class="file">src/matematica.py</div>
+            <p>Norme, QR, Householder, tridiagonalizare, QR_iteration, SVD, SVD redus, HOSVD și reconstrucție.</p>
+          </div>
+          <div class="card gray">
+            <div class="file">src/image_compressor.py</div>
+            <p>Împarte imaginea în blocuri, aplică Tucker/HOSVD și calculează raportul de compresie, eroarea și timpul.</p>
+          </div>
+          <div class="card">
+            <div class="file">src/main.py</div>
+            <p>Interfața Streamlit pentru încărcare imagine, alegere parametri, vizualizare și descărcare rezultate.</p>
+          </div>
+        </div>
+        <div class="callout">
+          <p>Testele și comparațiile cu NumPy sunt separate în `src/tests.py` și `src/comparison.py`.</p>
+        </div>
+        <aside class="notes">
+          Folosește acest slide ca hartă a proiectului: matematica este izolată, compresorul orchestrează blocurile, iar main.py este interfața.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Rezultate numerice: funcții matriceale</h2>
+        <div class="plot-grid">
+          <div>
+            <div class="plot"><img src="../comparison_results/matrix_accuracy.png" alt="Acuratețea funcțiilor matriceale"></div>
+            <p class="caption">Acuratețea funcțiilor matriceale implementate manual.</p>
+          </div>
+          <div>
+            <div class="plot"><img src="../comparison_results/matrix_runtime.png" alt="Timpul funcțiilor matriceale"></div>
+            <p class="caption">Comparație de timp cu funcțiile NumPy.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Spune că graficele validează implementarea manuală. NumPy este referință pentru comparație, nu parte din metoda principală.
+        </aside>
+      </section>
+
+      <section data-transition="fade">
+        <h2>Rezultate numerice: funcții tensoriale</h2>
+        <div class="plot-grid">
+          <div>
+            <div class="plot"><img src="../comparison_results/tensor_accuracy.png" alt="Acuratețea funcțiilor tensoriale"></div>
+            <p class="caption">Acuratețea funcțiilor tensoriale.</p>
+          </div>
+          <div>
+            <div class="plot"><img src="../comparison_results/tensor_runtime.png" alt="Timpul funcțiilor tensoriale"></div>
+            <p class="caption">Timpul de rulare pentru operațiile tensoriale.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Leagă aceste rezultate de compresor: dacă operațiile tensoriale sunt corecte, HOSVD-ul pe blocuri are bază numerică solidă.
+        </aside>
+      </section>
+
+      <section data-transition="slide">
+        <h2>Avantaje și limite</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>Avantaje</h3>
+            <p>Implementarea este transparentă.<br>
+            SVD redus oferă control asupra erorii.<br>
+            Tucker păstrează structura RGB a imaginii.<br>
+            Aplicația arată compromisul compresie-calitate.</p>
+          </div>
+          <div class="card gray">
+            <h3>Limite</h3>
+            <p>Este mai lentă decât NumPy.<br>
+            Calculul prin \(A^T A\) poate amplifica erori.<br>
+            HOSVD nu este aproximarea Tucker optimă.<br>
+            Compresia pe blocuri poate produce discontinuități vizuale.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Fii echilibrat: proiectul este didactic și transparent, dar mai lent decât bibliotecile optimizate.
+        </aside>
+      </section>
+
+      <section data-transition="fade">
+        <h2>Concluzie</h2>
+        <p class="lead">Proiectul demonstrează traseul complet de la teoria SVD la o aplicație practică de compresie a imaginilor.</p>
+        <div class="grid two">
+          <div>
+            <p>SVD oferă mecanismul de selecție a informației importante prin valori singulare.</p>
+            <p>HOSVD extinde această idee la imagini privite ca tensori, păstrând structura pe înălțime, lățime și canal RGB.</p>
+          </div>
+          <div class="card">
+            <h3>Bibliografie</h3>
+            <p>Golub & Van Loan, <em>Matrix Computations</em>.<br>
+            Kolda & Bader, <em>Tensor Decompositions and Applications</em>.<br>
+            De Lathauwer et al., <em>A Multilinear Singular Value Decomposition</em>.</p>
+          </div>
+        </div>
+        <aside class="notes">
+          Încheie cu ideea principală: SVD selectează informația importantă, iar HOSVD duce această idee la imagini ca tensori.
+        </aside>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4/plugin/notes/notes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      controls: true,
+      progress: true,
+      slideNumber: true,
+      transition: "fade",
+      transitionSpeed: "fast",
+      backgroundTransition: "fade",
+      width: 1280,
+      height: 720,
+      margin: 0.04,
+      plugins: [RevealNotes]
+    });
+  </script>
+</body>
+</html>

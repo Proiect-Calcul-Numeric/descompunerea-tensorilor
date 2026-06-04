@@ -1,9 +1,18 @@
 .venv/
+venv/
 __pycache__/
 *.pyc
 .env
 data/
 .antigravitycli
+
+# Local automation/tooling artifacts
+.playwright-cli/
+playwright-report/
+test-results/
+output/
+tools/
+temp_input.png
 
 # LaTeX build artifacts
 *.aux
